@@ -1,14 +1,12 @@
 from tablehost.uart import UartCom
+from random import randint
 
 foo = UartCom()
-foo.write(chr(0))
-foo.write(chr(20))
+bar = [None]*(336)
+while True:
+	for idx in range(336):
+		bar[idx] = randint(0,255)
 
-for x in range(0,20):
-	foo.write(chr(x))
+	foo.prepare_data(bar)
+	foo.write_whole_array(length=336)
 
-bar = ''
-while bar == '':
-	foo.write(chr(20))
-	bar = foo.read(1)
-	print "Rceived: \"%s\"" % bar
