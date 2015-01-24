@@ -1,5 +1,6 @@
 import serial
 import sys
+import csv
 
 class UartCom(object):
 	def __init__(self):
@@ -38,15 +39,24 @@ class UartCom(object):
 		return self._lastresponse
 
 	def testing(self):
-	 	self._connection.write(chr(0))
-	 	self._connection.write(chr(20))
-					 
-		print self._connection.readline()
-		for x in range(20):
-			self._connection.write(chr(x % 10))
-
-		bar = '1'
-		while (bar != ''):
-			bar = self._connection.readline()
-			print bar
-
+		writer = csv.writer(open("timings.csv","w"))
+		for idx in range(1,337):
+			timings = []
+			for rep in range(20):
+			 	self._connection.write(chr((idx >> 8) & 0xff))
+			 	self._connection.write(chr(idx & 0xff))
+							 
+				for x in range(idx):
+					self._connection.write(chr(x % 10))
+			
+				overflows = self._connection.readline()
+				timer_cnt = self._connection.readline()
+				timings.append(int(overflows) * 0xffff + int(timer_cnt))
+			foo = 0.0
+			for i in range(20):
+				foo = foo + float(timings[i])
+			timing = float(foo) / float(20)
+			secs = (1.0/16000000.0) * timing
+			print "Average timing for %3d: %6.4f Sekunden -> %6.4f FPS" % (idx,secs,(1.0/secs),)
+			writer.writerow((idx,timing,secs,(1.0/secs),))
+		writer.close()
