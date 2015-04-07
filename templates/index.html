@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<head>
+	<title>LED-Table player test</title>
+	<script type="text/javascript" src="{{ STATIC_URL }}scripts/inheritance.js"></script>
+	<script type="text/javascript" src="{{ STATIC_URL }}scripts/jquery.js"></script>
+	<script type="text/javascript" src="{{ STATIC_URL }}scripts/es.js"></script>
+	<script type="text/javascript" src="{{ STATIC_URL }}scripts/class.js"></script>
+	<script type="text/javascript" src="{{ STATIC_URL }}scripts/player.js"></script>
+	<style type="text/css">
+		@import url('{{ STATIC_URL }}css/main.css');
+	</style>
+</head>
+<html>
+	<body>
+		<div id="table_player">
+			<div id="disp_title">Tloremd akjer adr ksdfs dgoghpipf adrja sdfskldjfg spdkd </div>
+			<div id="disp_artist">Aasjfa iaebo sbgklrjbgosjroasodw  aoejr aajfae oadbfo arbo aeroa o</div>
+			<div id="time"><span id="time_passed">00:00</span> - <span id="time_act">03:00</span></div>
+			<div class="btns">
+				<div id="player_backward"><img src="{{ STATIC_URL }}images/player/player_back.png"/></div><div id="player_play"><img src="{{ STATIC_URL }}images/player/player_play.png"/></div><div id="player_stop"><img src="{{ STATIC_URL }}images/player/player_stop.png"/></div><div id="player_forward"><img src="{{ STATIC_URL }}images/player/player_forward.png"/></div>
+			</div>
+			<div class="btns">
+				<div id="player_shuffle"><img src="{{ STATIC_URL }}images/shuffle_off.png"/></div>
+				<div id="player_repeat"><img src="{{ STATIC_URL }}images/repeat_off.png"/></div>
+			</div>
+		</div>
+		<div id="table_songs">
+			<table>
+				<thead>
+					<tr>
+						<th>Nr.</th>
+						<th>Artist/Title</th>
+						<th>Length</th>
+					</tr>
+				</thead>
+				<tbody id="list_songs">
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,66 @@
+html,
+body {
+	width: 100%;
+	margin: 0px;
+}
+
+#table_player {
+	margin-top: 20px;
+}
+
+#table_songs,
+#table_player {
+	white-space: nowrap;
+	display: block;
+	margin: 0 auto;
+	width: 300px;
+	border: 1px solid black;
+	padding: 10px 10px 0px 10px;
+	-webkit-border-radius: 20px;
+	-moz-border-radius: 20px;
+	border-radius: 20px;
+}
+
+#list_songs {
+}
+
+#table_player .btns {
+	text-align: center;
+}
+
+#table_player .btns div{
+	display: inline;
+}
+
+#table_player .btns img {
+	cursor: pointer;
+}
+
+#player_backward img,
+#player_forward img,
+#player_stop img,
+#player_play img {
+	width: 50px;
+}
+
+#table_player {
+}
+
+#disp_title, #disp_artist {
+	overflow: hidden;
+}
+
+#disp_title {
+	font-weight: bold;
+}
+
+#disp_artist {
+	font-size: 0.6em;
+}
+
+#time {
+	display: block;
+	border-bottom: 1px solid #A2A2A2;
+	margin-bottom: 5px;
+	padding-bottom: 5px;
+}
