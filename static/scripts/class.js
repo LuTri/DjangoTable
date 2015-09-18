@@ -41,6 +41,8 @@ var Player_cl = Class.create({
 		this.list_pos = 0;
 		this.shuffle = 0;
 		this.repeat = 0;
+
+		this.songs = [];
 	},
 	register_elements : function(btn_play, btn_stop, btn_prev, btn_forward,
 		list_songs, list_lists, disp_title, disp_artist, time_passed,
@@ -51,5 +53,10 @@ var Player_cl = Class.create({
 		
 		this.disp_divs = [disp_title, disp_artist];
 		this.time_spans = [time_passed, time_act];
+	},
+	fetch_songs : function() {
+		
+	},
+	fetch_state : function) {
 	}
 });

@@ -1,0 +1,20 @@
+from django.conf.urls import patterns, include, url
+
+urlpatterns = patterns('apps.player.ajax',
+	url(r'^update_library/$', 'update_library'),
+    url(r'^save_playlist/$', 'save_playlist'),
+    url(r'^clear_songs/$', 'clear_songs'),
+    url(r'^remove_songs/$', 'remove_songs'),
+    url(r'^add_songs/$', 'add_songs'),
+    url(r'^volume/(?P<volume>\d{1,3})/$', 'volume'),
+    url(r'^random/$', 'random'),
+    url(r'^repeat/$', 'repeat'),
+    url(r'^play_song/(?P<song_id>\d+)/$', 'play_song'),
+    url(r'^stop/$', 'stop'),
+    url(r'^prev/$', 'prev'),
+    url(r'^play/$', 'play'),
+    url(r'^status/$', 'status'),
+    url(r'^update_library/$', 'update_library'),
+    url(r'^playlist_info/$', 'playlist_info'),
+    url(r'^all_songs/$', 'all_songs'),
+)
