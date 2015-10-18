@@ -5,12 +5,16 @@ import csv
 MAX_LEDS = 336
 
 class UartCom(object):
-	def __init__(self):
+	def __init__(self, debug=False):
+		self.connect()
+		self.data = [None] * MAX_LEDS
+		self.debug = debug
+
+	def connect(self):
 		self._connection = serial.Serial('/dev/ttyACM99',9600,timeout=5)
 		if self._connection.isOpen():
 			self._connection.close()
 		self._connection.open()
-		self.data = [None] * MAX_LEDS
 
 	def prepare_data(self, data):
 		if len(data) > MAX_LEDS:
@@ -26,6 +30,8 @@ class UartCom(object):
 		return self._connection.read(n)
 
 	def write_whole_array(self,length = MAX_LEDS):
+		if self.debug:
+			print "Writing data..."
 		self._connection.write(chr((length >> 8) & 0xff))
 		self._connection.write(chr(length & 0xff))
 
@@ -33,6 +39,8 @@ class UartCom(object):
 			self._connection.write(chr(self.data[idx]))
 
 		outcome = self._connection.readline()
+		if self.debug:
+			print outcome
 
 	def close(self):
 		self._connection.close()
