@@ -1,17 +1,17 @@
 import serial
-import sys
-import csv
+import time
 
 MAX_LEDS = 336
 
 class UartCom(object):
-	def __init__(self, debug=False):
-		self.connect()
+	def __init__(self, debug=False, baud=500000):
+		self.baud = baud
 		self.data = [None] * MAX_LEDS
 		self.debug = debug
+		self.connect()
 
 	def connect(self):
-		self._connection = serial.Serial('/dev/ttyACM99',9600,timeout=5)
+		self._connection = serial.Serial('/dev/ttyACM99', self.baud, timeout=5)
 		if self._connection.isOpen():
 			self._connection.close()
 		self._connection.open()
@@ -32,6 +32,7 @@ class UartCom(object):
 	def write_whole_array(self,length = MAX_LEDS):
 		if self.debug:
 			print "Writing data..."
+		start = time.time()
 		self._connection.write(chr((length >> 8) & 0xff))
 		self._connection.write(chr(length & 0xff))
 
@@ -39,8 +40,10 @@ class UartCom(object):
 			self._connection.write(chr(self.data[idx]))
 
 		outcome = self._connection.readline()
+		end = time.time()
 		if self.debug:
 			print outcome
+			print "Time taken: %s" % (end - start)
 
 	def close(self):
 		self._connection.close()
