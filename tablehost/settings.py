@@ -38,6 +38,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
 	'apps.main',
 	'apps.player',
+	'apps.table',
 	'libs.jinja'
 )
 
@@ -92,3 +93,8 @@ STATICFILES_DIRS = (
 TEMPLATE_DIRS = (
 	'templates',
 )
+
+try:
+	from local_settings import *
+except:
+	pass
