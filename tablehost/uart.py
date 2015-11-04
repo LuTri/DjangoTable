@@ -30,6 +30,7 @@ class UartCom(object):
 		return self._connection.read(n)
 
 	def write_whole_array(self,length = MAX_LEDS):
+		arr = []
 		if self.debug:
 			print "Writing data..."
 		start = time.time()
@@ -39,11 +40,16 @@ class UartCom(object):
 		for idx in range(length):
 			self._connection.write(chr(self.data[idx]))
 
-		outcome = self._connection.readline()
+		arr.append(self._connection.read())
+
+		while self._connection.inWaiting() > 0:
+			arr.append(self._connection.read())
+
 		end = time.time()
 		if self.debug:
-			print outcome
 			print "Time taken: %s" % (end - start)
+
+		return arr
 
 	def close(self):
 		self._connection.close()
