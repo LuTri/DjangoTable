@@ -2,11 +2,14 @@ from tablehost.uart import UartCom
 from random import randint
 
 foo = UartCom(debug=True)
-bar = [None]*(42)
-while True:
-	for idx in range(42):
-		bar[idx] = randint(0,50)
+bar = [None]*(336)
 
-	foo.prepare_data(bar)
-	foo.write_whole_array(length=42)
+def fill_arr(length,val):
+	bar = [None]*length
+	for i in range(0,length):
+		bar[i] = val
+	return bar
 
+array = fill_arr(336,1)
+
+foo.prepare_data(array)
