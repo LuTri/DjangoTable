@@ -95,6 +95,8 @@ TEMPLATE_DIRS = (
 	'templates',
 )
 
+MC_WS2812_CYCLES = 56933
+
 try:
 	from local_settings import *
 except:
