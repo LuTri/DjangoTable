@@ -1,9 +1,9 @@
 from django.db import models
 
-ROWS = 16
-COLS = 7
+ROWS = 8
+COLS = 14
 
-LED_CHOICES = enumerate(['%d_%d' % (x,y) for x in range(0,COLS) for y in range(0,ROWS)])
+LED_CHOICES = ['%d_%d' % (x,y) for x in range(0,COLS) for y in range(0,ROWS)]
 
 class Table(models.Model):	
 	description = models.CharField(
@@ -25,14 +25,14 @@ class Color(models.Model):
 	def __unicode__(self):
 		return self.descr
 
+	class Meta:
+		unique_together = (('r','g','b',))
+
 class LedPos(models.Model):
 	pos = models.CharField(
-		choices=LED_CHOICES,
+		choices=enumerate(LED_CHOICES),
 		max_length=5
 	)
 	table = models.ForeignKey(Table)
 	color = models.ForeignKey(Color)
-
-	
-
 # Create your models here.

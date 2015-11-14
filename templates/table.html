@@ -18,8 +18,11 @@
 	<body><!--
 	{% for led in leds %}
 		--!>{{ led }}<!--
+		{% if loop.index % max_cols == 0 %}
+		--!><br/><!--
+		{% endif %}
 	{% endfor %}--!>
-		<p id="colorpickerHolder">
+		<p id="colorpickerHolder"> 
 		</p>
 	</body>
 </html>
