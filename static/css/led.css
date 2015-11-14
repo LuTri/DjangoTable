@@ -1,0 +1,15 @@
+.leddiv {
+	position: absolute;
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border: 1px solid black;
+}
+
+.leddiv .hidden {
+	display: none;
+}
+
+.color_sel {
+	display: none;
+}

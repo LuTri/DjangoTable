@@ -6,6 +6,9 @@
  * Dual licensed under the MIT and GPL licenses
  * 
  */
+
+var active_led_selector = undefined;
+var url = '/table/setcol/';
 (function ($) {
 	var ColorPicker = function () {
 		var
@@ -57,6 +60,9 @@
 			},
 			setNewColor = function (hsb, cal) {
 				$(cal).data('colorpicker').newColor.css('backgroundColor', '#' + HSBToHex(hsb));
+				if ( ! (active_led_selector === undefined)) {
+					$('#' + active_led_selector).css('backgroundColor', '#' + HSBToHex(hsb));
+				}
 			},
 			keyDown = function (ev) {
 				var pressedKey = ev.charCode || ev.keyCode || -1;
@@ -200,6 +206,18 @@
 				cal.data('colorpicker').origColor = col;
 				setCurrentColor(col, cal.get(0));
 				cal.data('colorpicker').onSubmit(col, HSBToHex(col), HSBToRGB(col), cal.data('colorpicker').el);
+				if (!(active_led_selector === undefined)) {
+
+					$.ajax({
+						beforeSend: function(request) {
+							request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+						},
+						type: "POST",
+						url: url + active_led_selector.substr(3) + '/',
+						data: {'color': HSBToHex(col)}
+					});
+
+				}
 			},
 			show = function (ev) {
 				var cal = $('#' + $(this).data('colorpickerId'));
@@ -479,6 +497,7 @@
 		ColorPicker: ColorPicker.init,
 		ColorPickerHide: ColorPicker.hidePicker,
 		ColorPickerShow: ColorPicker.showPicker,
-		ColorPickerSetColor: ColorPicker.setColor
+		ColorPickerSetColor: ColorPicker.setColor,
+		ColorPickerSetLed: ColorPicker.setLed
 	});
 })(jQuery)

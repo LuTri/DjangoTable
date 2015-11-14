@@ -1,74 +1,46 @@
-from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import HttpResponse
+
 from libs.jinja import render_to_response
+
+from apps.table.classes import LEDS
+from apps.table.helper import COLS
+from apps.table.models import Table
+from apps.table.models import Color
+from apps.table.models import LedPos
+from apps.table.models import LED_CHOICES
+from apps.table.helper import snakish_to_coord
 
 import subprocess
 import json
 
-def HsvToRgb(h,s,v):
-	r,g,b = None,None,None
-
-	while (h < 0):
-		h += 360.0
-
-	while (h > 360):
-		h -= 360.0
-
-	if (v <= 0):
-		r = g = b = 0
-
-	elif (s <= 0):
-		r = g = b = v;
-	else:
-		hf = h / 60.0
-		hf_i = int(hf)
-		f = hf - hf_i
-
-		pv = v * (1 - s)
-		qv = v * (1 - s * f)
-		tv = v * (1 - s * (1-f))
-
-		if hf_i == 0:
-			r = v
-			g = tv
-			b = pv
-		elif hf_i == 1:
-			r = qv
-			g = v
-			b = tv
-		elif hf_i == 2:
-			r = pv
-			g = v
-			b = tv
-		elif hf_i == 3:
-			r = pv
-			g = qv
-			b = v
-		elif hf_i == 4:
-			r = tv
-			g = pv
-			b = v
-		elif hf_i == 5:
-			r = v
-			g = pv
-			b = qv
-		else:
-			r = g = b = v
-
-	return int(r*255),int(g*255),int(b*255)
-
+@ensure_csrf_cookie
 def index(request):
-	foo = json.load(open('tmp','r'))
-	vals = []
-	bar = json.loads(subprocess.check_output(['/home/tristan/projects/ledtable/mc/testing/test','%d' % (foo['val'] * 3)]))
-	for row in range(0,8):
-		for col in range(0,14):
-			vals.append((bar['values']['%d' % col]['%d' % row]['r'], bar['values']['%d' % col]['%d' % row]['g'], bar['values']['%d' % col]['%d' % row]['b'],))
+	context = {}
+	LEDS.update()
+	context['leds'] = LEDS
+	context['max_cols'] = COLS
+	return render_to_response('table.html', context)
 
-	foo['val'] = foo['val'] + 1
-	if (foo['val'] > 300):
-		foo['val'] = 0
-	json.dump(foo, open('tmp','w'))
-	return render_to_response('table_test.html',{'vals':vals})
-	
+def setcol(request, ledid):
+	hex_ = request.POST['color']
+	r = int(hex_[0:2], 16)
+	g = int(hex_[2:4], 16)
+	b = int(hex_[4:6], 16)
 
-# Create your views here.
+	table, created = Table.objects.get_or_create(description="ACTIVE")
+	color, created = Color.objects.get_or_create(r=r,g=g,b=b)
+
+	x,y = snakish_to_coord(int(ledid))
+	pos = [i for i, v in LED_CHOICES if v == '%d_%d' % (x,y)][0]
+	try:
+		ledpos = LedPos.objects.get(table=table, pos=pos)
+		existent = ledpos.color
+		if existent.ledpos_set.all().count() == 1:
+			existent.delete()
+		ledpos.color = color
+		ledpos.save()
+	except:
+		led = LedPos.objects.get_or_create(table=table, color=color, pos=pos)
+
+	return HttpResponse('')

@@ -1,9 +1,11 @@
 from django.db import models
+from apps.table.helper import COLS
+from apps.table.helper import ROWS
+from apps.table.helper import snakish_to_coord
 
-ROWS = 16
-COLS = 7
 
-LED_CHOICES = enumerate(['%d_%d' % (x,y) for x in range(0,COLS) for y in range(0,ROWS)])
+
+LED_CHOICES = [(x, u'%d_%d' % snakish_to_coord(x))for x in range(0,ROWS * COLS)]
 
 class Table(models.Model):	
 	description = models.CharField(
@@ -25,6 +27,9 @@ class Color(models.Model):
 	def __unicode__(self):
 		return self.descr
 
+	class Meta:
+		unique_together = (('r','g','b',))
+
 class LedPos(models.Model):
 	pos = models.CharField(
 		choices=LED_CHOICES,
@@ -33,6 +38,6 @@ class LedPos(models.Model):
 	table = models.ForeignKey(Table)
 	color = models.ForeignKey(Color)
 
-	
-
+	class Meta:
+		unique_together = (('table', 'pos',))
 # Create your models here.
