@@ -911,6 +911,9 @@
         function destroy() {
             //boundElement.show(); XXX: We don't want the input to be shown
             offsetElement.unbind("click.spectrum touchstart.spectrum");
+            $(doc).unbind("keydown.spectrum");
+            $(doc).unbind("click.spectrum");
+            $(window).unbind("resize.spectrum");
             container.remove();
             replacer.remove();
             spectrums[spect.id] = null;
