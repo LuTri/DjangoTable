@@ -1,3 +1,7 @@
+var url = '/table/setcol/';
+var cont_width = 195;
+var cont_height = 274;
+
 function getCookie(name) {
     var cookieValue = null;
     if (document.cookie && document.cookie != '') {
@@ -42,8 +46,43 @@ function resize() {
 	});
 }
 
+function finish_spectrum(element) {
+	$(element).spectrum('destroy');
+	$(element).removeClass('colorizing');
+}
+
 function colorize(element) {
-	active_led_selector = $(element).attr('id');
+	$('.leddiv > .color_sel.colorizing').each(function() {
+		finish_spectrum(this);
+	});
+
+	var selector = $(element).children('.color_sel');
+
+	selector.addClass('colorizing');
+	selector.spectrum({
+		flat: true,
+		showPalette: true,
+		preferredFormat: "hex",
+		clickoutFiresChange: false,
+		allowEmpty: true,
+		previewDiv: element,
+		color: $(element).css('background-color'),
+		change: function() {
+			var result = selector.spectrum('get');
+			if (!(result === null || result === undefined)) {
+				var color = result.toHex();
+				$.ajax({
+					beforeSend: function(request) {
+						request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+					},
+					type: "POST",
+					url: url + selector.parent().attr('id').substr(3) + '/',
+					data: {'color': color}
+				});
+			}
+			finish_spectrum(selector);
+		}
+	});
 };
 
 $(document).ready(function() {
