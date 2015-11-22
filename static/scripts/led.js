@@ -2,6 +2,23 @@ var url = '/table/setcol/';
 var cont_width = 195;
 var cont_height = 274;
 
+var standarpal = ['#000000', '#555555', '#AAAAAA', '#FFFFFF', '#FF0000', '#FF8000', '#FFFF00', '#80FF00', '#00FF00', '#00FF80', '#00FFFF', '#0080FF', '#0000FF', '#8000FF', '#FF00FF', '#FF0080'];
+var recentpal = [];
+
+function fill_recentpal(color) {
+	if (standarpal.indexOf(color) == -1) {
+		var idx = -1;
+		if ((idx = recentpal.indexOf(color)) == -1) {
+			if (recentpal.length >= 16) {
+				console.log(recentpal.shift());
+			}
+		} else {
+			recentpal.splice(idx,1);
+		}
+		recentpal.push(color)
+	}
+}
+
 function getCookie(name) {
     var cookieValue = null;
     if (document.cookie && document.cookie != '') {
@@ -65,6 +82,7 @@ function colorize(element) {
 		allowEmpty: true,
 		previewDiv: element,
 		color: $(element).css('background-color'),
+		palette: recentpal != null ? standarpal.concat(recentpal) : standarpal,
 		change: function() {
 			var result = selector.spectrum('get');
 			var posturl = url + selector.parent().attr('id').substr(3) + '/';
@@ -72,6 +90,7 @@ function colorize(element) {
 
 			if (!(result === null || result === undefined)) {
 				var color = result.toHex();
+				fill_recentpal('#' + color);
 				$.ajax({
 					beforeSend: function(request) {
 						request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
