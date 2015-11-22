@@ -9,3 +9,7 @@
 .leddiv .hidden {
 	display: none;
 }
+
+.color_sel {
+	display: none;
+}
