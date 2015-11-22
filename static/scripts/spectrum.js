@@ -338,7 +338,7 @@
                 e.stopPropagation();
                 e.preventDefault();
                 revert();
-                hide();
+                destroy();
             });
 
             clearButton.attr("title", opts.clearText);
