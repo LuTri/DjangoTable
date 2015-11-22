@@ -864,6 +864,11 @@
                 displayColor = '',
                 hasChanged = !tinycolor.equals(color, colorOnShow);
 
+			if (!hasChanged) {
+				destroy();
+				return;
+			}
+
             if (color) {
                 displayColor = color.toString(currentPreferredFormat);
                 // Update the selection palette with the current color
@@ -874,7 +879,7 @@
                 boundElement.val(displayColor);
             }
 
-            if (fireCallback && hasChanged) {
+            if (fireCallback) {
                 callbacks.change(color);
                 boundElement.trigger('change', [ color ]);
             }
