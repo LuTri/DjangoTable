@@ -1,0 +1,3 @@
+[submodule "AVRMusicTable"]
+	path = AVRMusicTable
+	url = git@github.com:/LuTri/AVRMusicTable.git
