@@ -39,7 +39,6 @@ INSTALLED_APPS = (
 	'apps.main',
 	'apps.player',
 	'apps.table',
-	'apps.mc',
 	'libs.jinja'
 )
 
