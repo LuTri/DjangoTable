@@ -11,6 +11,8 @@ from apps.table.models import LedPos
 from apps.table.models import LED_CHOICES
 from apps.table.helper import snakish_to_coord
 
+from tablehost.uart import UartCom
+
 import subprocess
 import json
 
@@ -22,6 +24,7 @@ def index(request):
 	return render_to_response('table.html', context)
 
 def setcol(request, ledid):
+	mccom = UartCom(False)
 	hex_ = request.POST['color']
 	r = int(hex_[0:2], 16)
 	g = int(hex_[2:4], 16)
@@ -36,6 +39,10 @@ def setcol(request, ledid):
 	led = LedPos.objects.get_or_create(table=table, color=color, pos=pos)
 
 	print (r,g,b,)
+
+	mccom.prepare_data(table.to_uart_array())
+	mccom.write_whole_array()
+
 	return HttpResponse('')
 
 # Create your views here.
