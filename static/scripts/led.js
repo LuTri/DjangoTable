@@ -39,8 +39,8 @@ function resize() {
 		var x, y;
 		$(this).css('width', value - 2);
 		$(this).css('height', value - 2);
-		x = parseInt($(this).children("#pos_x").html());
-		y = parseInt($(this).children("#pos_y").html());
+		x = parseInt($(this).children(".pos_x").html());
+		y = parseInt($(this).children(".pos_y").html());
 		$(this).css('top', offset_y + y * value);
 		$(this).css('left', offset_x + x * value);
 	});
