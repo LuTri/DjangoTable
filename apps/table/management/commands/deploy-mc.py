@@ -13,6 +13,7 @@ class Command(BaseCommand):
 
 	option_list = BaseCommand.option_list + (
 		make_option('--head', action='store', dest='head', default='origin/master'),
+		make_option('--nofetch', action='store_true', dest='nofetch', default=False),
 	)		
 
 	def __init__(self, *args, **kwargs):
@@ -50,10 +51,11 @@ class Command(BaseCommand):
 	def clean(self, **options):
 		return self._run_shell_command(['make', 'clean'])
 
-	def make(self, **options):
-		d_fetch, ouoput = self.fetch(**options)
-		d_clean, output = self.clean(**options)
-		if d_fetch and d_clean:
+	def make(self, nofetch, **options):
+		if not nofetch:
+			done, ouoput = self.fetch(**options)
+		done, output = self.clean(**options)
+		if done:
 			return self._run_shell_command(['make'])
 		return done, output
 
