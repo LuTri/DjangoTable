@@ -1,10 +1,8 @@
 from django.contrib import admin
 from apps.table.models import Table
-from apps.table.models import Color
-from apps.table.models import LedPos
+from apps.table.models import Led
 
 admin.site.register(Table)
-admin.site.register(LedPos)
-admin.site.register(Color)
+admin.site.register(Led)
 
 # Register your models here.

@@ -43,14 +43,15 @@ class UartCom(object):
 		if self.debug:
 			print "Time to write: %s" % (time.time() - start)
 
-		arr.append(self._connection.read())
-
-		while self._connection.inWaiting() > 0:
-			arr.append(self._connection.read())
-
+#		arr.append(self._connection.read())
+#
+#		while self._connection.inWaiting() > 0:
+#			arr.append(self._connection.read())
+#
 		end = time.time()
 		if self.debug:
 			print "Time taken: %s" % (end - start)
+			print arr
 
 		return arr
 
