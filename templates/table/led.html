@@ -1,5 +1,7 @@
 <div class="leddiv" id="led{{ id }}" style="background-color: #{{ color }};">
-	<div id="pos_x" class="hidden">{{ x }}</div>
-	<div id="pos_y" class="hidden">{{ y }}</div>
-	<input type="text" class="color_sel" id="col{{ id }}"/>
+	<div class="pos_x hidden">{{ x }}</div>
+	<div class="pos_y hidden">{{ y }}</div>
+	<form action="{{ url_reverse('setcol', kwargs={'tableid':table, 'ledid':id}) }}" method="post">
+		<input type="text" class="color_sel" id="col{{ id }}"/>
+	</form>
 </div>
