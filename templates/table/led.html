@@ -2,6 +2,8 @@
 	<div class="pos_x hidden">{{ x }}</div>
 	<div class="pos_y hidden">{{ y }}</div>
 	<form action="{{ url_reverse('setcol', kwargs={'tableid':table, 'ledid':id}) }}" method="post">
-		<input type="text" class="color_sel" id="col{{ id }}"/>
+
+		<input value="{{ color }}" class="jscolor {width:101, padding:0, shadow:false,
+		    borderWidth:0}" name="color">
 	</form>
 </div>

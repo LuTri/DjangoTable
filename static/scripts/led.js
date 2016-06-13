@@ -33,7 +33,7 @@ function resize() {
 	value = (max_val < value ? max_val : value);
 
 	offset_x = (port_width / 2) - ((value * 14) / 2);
-	offset_y = (port_height / 2) - ((value * 8) / 2);
+	offset_y = 10;
 
 	$('.leddiv').each(function() {
 		var x, y;
@@ -52,45 +52,25 @@ function finish_spectrum(element) {
 }
 
 function colorize(element) {
-	$('.leddiv > .color_sel.colorizing').each(function() {
-		finish_spectrum(this);
-	});
-
-	var selector = $(element).children('.color_sel');
-
-	selector.addClass('colorizing');
-	selector.spectrum({
-		flat: true,
-		showPalette: true,
-		preferredFormat: "hex",
-		clickoutFiresChange: false,
-		allowEmpty: true,
-		previewDiv: element,
-		color: $(element).css('background-color'),
-		change: function() {
-			var result = selector.spectrum('get');
-			if (!(result === null || result === undefined)) {
-				var color = result.toHex();
-				$.ajax({
-					beforeSend: function(request) {
-						request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
-					},
-					type: "POST",
-					url: url + selector.parent().attr('id').substr(3) + '/',
-					data: {'color': color}
-				});
-			}
-			finish_spectrum(selector);
-		}
-	});
 };
 
 $(document).ready(function() {
 	resize();
-	$('.leddiv').each(function() {
-		$(this).click(function() {
-			colorize(this);
+
+	$(".leddiv > form > [name=color]").change(function(event) {
+		var url = $(this).parent('form').attr('action');
+		var color = this.jscolor.toString();
+
+		$.ajax({
+			beforeSend: function(request) {
+				request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+			},
+			type: "POST",
+			url: url,
+			data: {'color': color}
 		});
+
+
 	});
 });
 
