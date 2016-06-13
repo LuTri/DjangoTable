@@ -21,7 +21,6 @@ def index(request, tableid):
 	return render_to_response('table.html', context)
 
 def setcol(request, ledid, tableid):
-	mccom = UartCom(True)
 	color = request.POST['color']
 
 	table, created = Table.objects.get_or_create(pk=tableid)
@@ -31,8 +30,12 @@ def setcol(request, ledid, tableid):
 
 	led.save()
 
-	mccom.prepare_data(table.to_uart_array())
-	mccom.write_whole_array()
+	try:
+		mccom = UartCom(True)
+		mccom.prepare_data(table.to_uart_array())
+		mccom.write_whole_array()
+	except:
+		print "MC seems to be unresponsive..."
 
 	return HttpResponse('')
 
