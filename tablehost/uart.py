@@ -40,6 +40,9 @@ class UartCom(object):
 		for idx in range(length):
 			self._connection.write(chr(self.data[idx]))
 
+		if self.debug:
+			print "Time to write: %s" % (time.time() - start)
+
 		arr.append(self._connection.read())
 
 		while self._connection.inWaiting() > 0:
