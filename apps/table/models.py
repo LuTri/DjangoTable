@@ -11,6 +11,10 @@ class Table(models.Model):
 		verbose_name='ColorScheme'
 	)
 
+	def to_uart_array(self):
+		result = [20] * ROWS * COLS * 3
+		return result
+
 class Color(models.Model):
 	descr = models.CharField(
 		max_length=200,
