@@ -113,3 +113,11 @@ try:
     from local_settings import *
 except:
     pass
+
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.mysql',
+#	'USER': 'ledtester',
+#	'NAME': 'led_table',
+#    }
+#}
