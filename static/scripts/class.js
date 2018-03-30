@@ -57,6 +57,6 @@ var Player_cl = Class.create({
 	fetch_songs : function() {
 		
 	},
-	fetch_state : function) {
+	fetch_state : function() {
 	}
 });
