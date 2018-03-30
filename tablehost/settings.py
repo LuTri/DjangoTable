@@ -22,8 +22,6 @@ SECRET_KEY = 'w0*myd_!iqn&%%fm+cx)uxm@odo_74wu=q=-+6t3iah3tzruj2'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-TEMPLATE_DEBUG = True
-
 ALLOWED_HOSTS = []
 
 
@@ -36,11 +34,11 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-	'apps.main',
-	'apps.player',
-	'apps.table',
-	'apps.mc',
-	'libs.jinja'
+    'apps.main',
+    'apps.player',
+    'apps.table',
+    'apps.mc',
+    'libs.jinja'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -88,14 +86,30 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (
-	os.path.join(BASE_DIR, "static"),
+    os.path.join(BASE_DIR, "static"),
 )
 
-TEMPLATE_DIRS = (
-	'templates',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'NAME': 'djangotemplates',
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+            ],
+            'loaders': [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ],
+        }
+    },
+]
+
+JINJA_TEMPLATE_DIRS = [
+    'templates',
+]
 
 try:
-	from local_settings import *
+    from local_settings import *
 except:
-	pass
+    pass

@@ -1,20 +1,21 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
+from apps.player import ajax
 
-urlpatterns = patterns('apps.player.ajax',
-	url(r'^update_library/$', 'update_library'),
-    url(r'^save_playlist/$', 'save_playlist'),
-    url(r'^clear_songs/$', 'clear_songs'),
-    url(r'^remove_songs/$', 'remove_songs'),
-    url(r'^add_songs/$', 'add_songs'),
-    url(r'^volume/(?P<volume>\d{1,3})/$', 'volume'),
-    url(r'^random/$', 'random'),
-    url(r'^repeat/$', 'repeat'),
-    url(r'^play_song/(?P<song_id>\d+)/$', 'play_song'),
-    url(r'^stop/$', 'stop'),
-    url(r'^prev/$', 'prev'),
-    url(r'^play/$', 'play'),
-    url(r'^status/$', 'status'),
-    url(r'^update_library/$', 'update_library'),
-    url(r'^playlist_info/$', 'playlist_info'),
-    url(r'^all_songs/$', 'all_songs'),
-)
+urlpatterns = [
+    url(r'^update_library/$', ajax.update_library),
+    url(r'^save_playlist/$', ajax.save_playlist),
+    url(r'^clear_songs/$', ajax.clear_songs),
+    url(r'^remove_songs/$', ajax.remove_songs),
+    url(r'^add_songs/$', ajax.add_songs),
+    url(r'^volume/(?P<volume>\d{1,3})/$', ajax.volume),
+    url(r'^random/$', ajax.random),
+    url(r'^repeat/$', ajax.repeat),
+    url(r'^play_song/(?P<song_id>\d+)/$', ajax.play_song),
+    url(r'^stop/$', ajax.stop),
+    url(r'^prev/$', ajax.prev),
+    url(r'^play/$', ajax.play),
+    url(r'^status/$', ajax.status),
+    url(r'^update_library/$', ajax.update_library),
+    url(r'^playlist_info/$', ajax.playlist_info),
+    url(r'^all_songs/$', ajax.all_songs),
+]

@@ -11,7 +11,7 @@ from jinja2 import Environment
 __all__ = ('render_to_string', 'render_to_response', 'render_tex_to_string')
 
 loader_array = []
-for pth in getattr(settings, 'TEMPLATE_DIRS', ()):
+for pth in getattr(settings, 'JINJA_TEMPLATE_DIRS', ()):
 	loader_array.append(FileSystemLoader(join(settings.BASE_DIR, pth)))
 
 default_mimetype = getattr(settings, 'DEFAULT_CONTENT_TYPE')
