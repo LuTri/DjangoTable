@@ -9,7 +9,7 @@ from django.conf import settings
 MAX_LEDS = 336
 
 class UartCom(object):
-    def __init__(self, debug=False, baud=500000):
+    def __init__(self, debug=False, baud=38400):
         self.baud = baud
         self.data = []
         self.debug = debug
@@ -36,40 +36,38 @@ class UartCom(object):
 
     def write(self,val):
         self._connection.write(val)
-        
+
     def read(self,n):
         return self._connection.read(n)
 
     def write_whole_array(self):
         arr = []
         if self.debug:
-            print("Writing data...")
+            print("Writing {} bytes of data...".format(len(self.data)))
 
         length = len(self.data)
 
         start = time.time()
-        self.connect()
+
         self._connection.write(chr((length >> 8) & 0xff))
         self._connection.write(chr(length & 0xff))
 
-        for idx in range(length):
-            self._connection.write(chr(self.data[idx]))
-        self._connection.write('\0')
+        self._connection.write(self.data)
+
+        while self._connection.out_waiting != 0:
+            print("Waiting for output")
 
         if self.debug:
             print("Time to write: %s" % (time.time() - start))
-
-        arr += [self._connection.read()]
-        
-        arr += self.read(self._connection.inWaiting())
-        print(arr)
+        self.read(self._connection.in_waiting)
+        while (self._connection.in_waiting != 0):
+            print("SOMETHING'S WAITING FOR ya!")
+            print(self.read(self._connection.in_waiting))
 
         end = time.time()
         if self.debug:
             print("Time taken: %s" % (end - start))
-            print(arr)
 
-        self.close()
         return arr
 
     def close(self):
@@ -81,6 +79,7 @@ class UartCom(object):
 
 
 SIMULATOR_SETUP = False
+
 
 class UartSimulator:
     def __init__(self, debug=False):
@@ -124,4 +123,3 @@ class UartSimulator:
                 idx += 3
                 s.sendall(struct.pack(settings.SIM_LED_STRUCT, *cache,
                                       idx >= len(self.data)))
-            
