@@ -1,7 +1,7 @@
 backports-abc==0.5
 certifi==2018.1.18
 chardet==3.0.4
-Django==1.11
+Django==1.11.28
 futures==3.2.0
 idna==2.6
 Jinja2==2.10
