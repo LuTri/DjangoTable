@@ -15,4 +15,4 @@ requests==2.18.4
 singledispatch==3.4.0.3
 six==1.11.0
 tornado==5.0.1
-urllib3==1.22
+urllib3==1.26.5
