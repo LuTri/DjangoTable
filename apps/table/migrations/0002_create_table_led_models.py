@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='led',
             name='table',
-            field=models.ForeignKey(to='table.Table'),
+            field=models.ForeignKey(to='table.Table', on_delete=models.deletion.RESTRICT),
             preserve_default=True,
         ),
     ]

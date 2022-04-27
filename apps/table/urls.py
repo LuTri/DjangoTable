@@ -1,9 +1,9 @@
-from django.conf.urls import patterns, include, url
-from django.contrib import admin
+from django.urls import path
 
 from apps.table.views import *
 
-urlpatterns = patterns('',
-    url(r'^setcol/(?P<ledid>\d+)/(?P<tableid>\d+)/$', setcol, name='setcol'),
-    url(r'^(?P<tableid>\d+)/$', index, name='table_main'),
-)
+urlpatterns = [
+    path('update/<int:tableid>/', update_table, name='update_table'),
+    path('setcol/<int:ledid>/<int:tableid>/', setcol, name='setcol'),
+    path('<int:tableid>/', index, name='table_main'),
+]

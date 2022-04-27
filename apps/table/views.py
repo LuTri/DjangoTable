@@ -35,7 +35,7 @@ def setcol(request, ledid, tableid):
 		mccom.prepare_data(table.to_uart_array())
 		mccom.write_whole_array()
 	except:
-		print "MC seems to be unresponsive..."
+		print("MC seems to be unresponsive...")
 
 	return HttpResponse('')
 

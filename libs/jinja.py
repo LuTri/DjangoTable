@@ -2,7 +2,7 @@
 
 from django.http import HttpResponse
 from django.conf import settings
-from django.core.urlresolvers import get_callable
+from django.urls import reverse_lazy
 from os.path import join
 from jinja2.loaders import FileSystemLoader, PackageLoader, ChoiceLoader
 import re
@@ -44,7 +44,7 @@ class LazyEnv(object):
 		if self._environment == None:
 			self._environment = Environment(extensions=global_exts, loader=ChoiceLoader(loader_array))
 			self._environment.globals['STATIC_URL'] = settings.STATIC_URL
-			self._environment.globals['url_reverse'] = get_callable('django.core.urlresolvers.reverse_lazy')
+			self._environment.globals['url_reverse'] = reverse_lazy
 		if name == '__members__':
 			return dir(self._environment)
 		return getattr(self._environment, name)

@@ -1,6 +1,6 @@
-import mpd
+import musicpd
 
-class CustMPDClient(mpd.MPDClient):
+class CustMPDClient(musicpd.MPDClient):
 	@staticmethod
 	def GetClient():
 		newclient = CustMPDClient(use_unicode=True)

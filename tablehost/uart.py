@@ -38,7 +38,7 @@ class UartCom(object):
 	def write_whole_array(self):
 		arr = []
 		if self.debug:
-			print "Writing data..."
+			print("Writing data...")
 
 		length = len(self.data)
 
@@ -52,17 +52,17 @@ class UartCom(object):
 		self._connection.write('\0')
 
 		if self.debug:
-			print "Time to write: %s" % (time.time() - start)
+			print("Time to write: %s" % (time.time() - start))
 
 		arr += [self._connection.read()]
 		
 		arr += self.read(self._connection.inWaiting())
-		print arr
+		print(arr)
 
 		end = time.time()
 		if self.debug:
-			print "Time taken: %s" % (end - start)
-			print arr
+			print("Time taken: %s" % (end - start))
+			print(arr)
 
 		self.close()
 		return arr

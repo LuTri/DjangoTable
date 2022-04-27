@@ -37,19 +37,18 @@ INSTALLED_APPS = (
     'apps.main',
     'apps.player',
     'apps.table',
-    'apps.mc',
     'libs.jinja'
 )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
 ROOT_URLCONF = 'tablehost.urls'
 
@@ -95,7 +94,9 @@ TEMPLATES = [
         'NAME': 'djangotemplates',
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
             'loaders': [
                 'django.template.loaders.filesystem.Loader',
@@ -111,15 +112,9 @@ JINJA_TEMPLATE_DIRS = [
 
 MC_WS2812_CYCLES = 56933
 
-try:
-    from local_settings import *
-except:
-    pass
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.mysql',
-#	'USER': 'ledtester',
-#	'NAME': 'led_table',
-#    }
-#}
+try:
+    from .local_settings import *
+except ImportError:
+    pass

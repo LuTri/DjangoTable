@@ -31,10 +31,10 @@ class Table(models.Model):
 
 class Led(models.Model):
 	pos = models.IntegerField(default=0)
-	table = models.ForeignKey(Table)
+	table = models.ForeignKey(Table, on_delete=models.RESTRICT)
 	color = models.CharField(max_length=6, default='000000')
 
-	def __unicode__(self):
+	def __str__(self):
 		from apps.table.helper import snakish_to_coord
 		context = {}
 		context['x'], context['y'] = snakish_to_coord(self.pos)

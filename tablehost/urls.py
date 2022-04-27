@@ -1,9 +1,9 @@
-from django.conf.urls import include, url
+from django.urls import include, path
 from django.contrib import admin
 
 urlpatterns =[
-    url(r'^player/', include('apps.player.urls')),
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^table/', include('apps.table.urls')),
-    url(r'^$', include('apps.main.urls')),
+    path(r'player/', include('apps.player.urls')),
+    path('admin/', admin.site.urls),
+    path('table/', include('apps.table.urls')),
+    path('', include('apps.main.urls')),
 ]
