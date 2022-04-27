@@ -54,7 +54,16 @@ function finish_spectrum(element) {
 function colorize(element) {
 };
 
+function rgbToString(r, g, b) {
+  return (
+    (0x100 | Math.round(r)).toString(16).substr(1) +
+    (0x100 | Math.round(g)).toString(16).substr(1) +
+    (0x100 | Math.round(b)).toString(16).substr(1)
+  );
+};
+
 $(document).ready(function() {
+  let updateTimeout = null;
 	resize();
 
 	$(".leddiv > form > [name=color]").change(function(event) {
@@ -71,6 +80,71 @@ $(document).ready(function() {
 		});
 
 
+	});
+
+	$(".leddiv").hover(function(event) {
+	  $(".leddiv").children('form').children('input.jscolor').each(function (elem) {
+	    this.jscolor.fromRGB(0,0,0);
+	    $(this).attr('value', this.jscolor.toString());
+	  });
+
+	  let x = parseInt($(this).children('.pos_x').html());
+	  let y = parseInt($(this).children('.pos_y').html());
+
+	  let selector_x = new Array();
+	  let selector_y = new Array();
+	  let max_distance = Math.sqrt(
+      Math.pow(2, 2) +
+      Math.pow(2, 2)
+    );
+	  for (let s_x of [x - 2, x - 1, x, x + 1, x + 2]) {
+	    selector_x.push(".pos_x.x_" + (s_x));
+	  }
+	  for (let s_y of [y - 2, y - 1, y, y + 1, y + 2]) {
+	    selector_y.push(".pos_y.y_" + (s_y));
+	  }
+
+	  $(".leddiv").has(selector_x.join(', ')).has(selector_y.join(', ')).each(function (elem) {
+      let other_x = parseInt($(this).children('.pos_x').html());
+	    let other_y = parseInt($(this).children('.pos_y').html());
+
+	    let distance = Math.sqrt(
+	      Math.pow(Math.abs(other_x - x), 2) +
+	      Math.pow(Math.abs(other_y - y), 2)
+	    );
+
+	    $(this).children('form').children('input.jscolor').each(function (elem) {
+	      let hue = (1 / max_distance) * distance
+  	    this.jscolor.fromHSV(hue * 100, 100, (1-hue) * 100);
+        $(this).attr('value', this.jscolor.toString());
+	    });
+	  });
+
+    let data = {};
+
+    $(".jscolor").each(function(elem) {
+      let led_id = $(this).parent('form').children("[name=led_id]").attr('value');
+      let color = this.jscolor.toString();
+      data[led_id] = color;
+    });
+
+    let url = $(this).parent().children('form').attr('action');
+
+    if (updateTimeout != null) {
+      window.clearTimeout(updateTimeout);
+      updateTimeout = null;
+    }
+
+    updateTimeout = window.setTimeout(() => {
+      $.ajax({
+        beforeSend: function(request) {
+          request.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+        },
+        type: "POST",
+        url: url,
+        data: data
+      });
+    }, 200);
 	});
 });
 

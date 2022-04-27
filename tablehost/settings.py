@@ -114,6 +114,16 @@ MC_WS2812_CYCLES = 56933
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+UART_SIM_PORT = None
+SIM_EDGE_LENGTH = None
+SIM_DOWNWARDS = None
+SIM_RIGHTWARDS = None
+SIM_HORIZONTAL = None
+SIM_DRAW_CONNECTORS = None
+SIM_FPS = None
+SIM_PARAM_STRUCT = 'III????I'
+SIM_LED_STRUCT = f'24h?'
+
 try:
     from .local_settings import *
 except ImportError:

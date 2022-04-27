@@ -12,12 +12,14 @@
 			@import url('{{ STATIC_URL }}css/spectrum.css');
 		</style>
 	</head>
-	<body><!--
+	<body>
+		<form method="post" action="{{ url_reverse('update_table', kwargs={'tableid':table.pk}) }}" class="full_table_form"></form>
 	{% for led in leds %}
-		--!>{{ led }}<!--
+		{{ led }}
 		{% if loop.index % max_cols == 0 %}
-		--!><br/><!--
+		<br/>
 		{% endif %}
-	{% endfor %}--!>
+	{% endfor %}
+
 	</body>
 </html>
