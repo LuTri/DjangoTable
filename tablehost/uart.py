@@ -9,11 +9,34 @@ from django.conf import settings
 MAX_LEDS = 336
 
 class UartCom(object):
+    STRUCT_FORMAT = '>3sHH{length}B'
+
     def __init__(self, debug=False, baud=38400):
         self.baud = baud
         self.data = []
         self.debug = debug
         self.connect()
+
+    @property
+    def fletcher_checksum(self):
+        sum1 = sum2 = 0
+
+        for x in self.data:
+            sum1 = (sum1 + x) % 255
+            sum2 = (sum2 + sum1) % 255
+
+        return (sum1 << 8) | sum2
+
+    @property
+    def uart_out(self):
+        length = len(self.data)
+        return struct.pack(
+            self.STRUCT_FORMAT.format(length=length),
+            'TAD'.encode(),
+            length,
+            self.fletcher_checksum,
+            *self.data
+        )
 
     def connect(self):
         self._connection = serial.Serial(
@@ -49,10 +72,12 @@ class UartCom(object):
 
         start = time.time()
 
-        self._connection.write(chr((length >> 8) & 0xff))
-        self._connection.write(chr(length & 0xff))
+        self._connection.write(self.uart_out)
 
-        self._connection.write(self.data)
+        #self._connection.write(chr((length >> 8) & 0xff))
+        #self._connection.write(chr(length & 0xff))
+
+        #self._connection.write(self.data)
 
         while self._connection.out_waiting != 0:
             print("Waiting for output")
