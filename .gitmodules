@@ -1,6 +1,6 @@
 [submodule "AVRMusicTable"]
 	path = AVRMusicTable
-	url = git@github.com:/LuTri/AVRMusicTable.git
+	url = ../AVRMusicTable.git
 [submodule "OdroidUart"]
 	path = OdroidUart
-	url = git@github.com:LuTri/OdroidUart.git
+	url = ../OdroidUart.git
