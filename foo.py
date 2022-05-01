@@ -1,5 +1,8 @@
 from tablehost.uart import UartCom
+com = UartCom(True)
+#failures = com.test_echo()
 
-foo = UartCom(debug=True)
-foo.write("Hello, mc FOobar!\0")
-print foo.readline()
+#data = [128, 128, 128]
+#com.prepare_data(data)
+
+#result = com.write_whole_array()

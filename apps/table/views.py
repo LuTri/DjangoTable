@@ -12,7 +12,7 @@ from apps.table.models import Table
 from apps.table.models import Led
 from apps.table.helper import snakish_to_coord
 
-from tablehost.uart import UartSimulator
+from tablehost.uart import UartCom
 
 import subprocess
 import json
@@ -35,7 +35,7 @@ def update_table(request, tableid):
 		led.save()
 
 	try:
-		mccom = UartSimulator(True)
+		mccom = UartCom(True)
 		mccom.prepare_data(table.to_uart_array())
 		mccom.write_whole_array()
 	except socket.error as exc:
@@ -56,7 +56,7 @@ def setcol(request, ledid, tableid):
 
 	if do_push:
 		try:
-			mccom = UartSimulator(True)
+			mccom = UartCom(True)
 			mccom.prepare_data(table.to_uart_array())
 			mccom.write_whole_array()
 		except socket.error as exc:

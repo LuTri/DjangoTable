@@ -1,8 +1,41 @@
+import os
+
 from django.db import models
 from libs.jinja import render_to_string
 
 ROWS = 8
 COLS = 14
+
+
+class ColorFilter(models.Model):
+	description = models.CharField(
+		max_length=200,
+		null=True,
+		default=None
+	)
+
+	fnc_string = models.TextField(
+		null=True,
+		default=None,
+	)
+
+	applied_in = models.ManyToManyField(
+		'Table',
+		related_name='color_filters',
+		blank=True,
+	)
+
+	def apply(self, r, g, b):
+		data = {}
+		_fnc = os.linesep.join(f'    {line}' for line in self.fnc_string.split(os.linesep))
+		_fnc = f'def _fnc(r,g,b):{os.linesep}{_fnc}'
+
+		exec(_fnc, data)
+		return data['_fnc'](r, g, b)
+
+	def __str__(self):
+		return self.description
+
 
 class Table(models.Model):	
 	description = models.CharField(
@@ -19,8 +52,14 @@ class Table(models.Model):
 		result = [0] * ROWS * COLS * 3
 		for item in self.led_set.all():
 			pos = int(item.pos)
-			result[pos * 3 + 1], result[pos * 3], result[pos * 3 + 2] =\
-				self.hex_to_rgb(item.color)
+			r, g, b = self.hex_to_rgb(item.color)
+			for _filter in self.color_filters.all():
+				r, g, b = _filter.apply(r, g, b)
+
+			result[pos * 3 + 1] = int(r)
+			result[pos * 3] = int(g)
+			result[pos * 3 + 2] = int(b)
+
 		return result
 
 	def get_leds(self):

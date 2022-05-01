@@ -114,8 +114,11 @@ $(document).ready(function() {
 	    );
 
 	    $(this).children('form').children('input.jscolor').each(function (elem) {
-	      let hue = (1 / max_distance) * distance
-  	    this.jscolor.fromHSV(hue * 100, 100, (1-hue) * 100);
+	      let hue = (1 / max_distance) * distance;
+	      let h = (hue * 40) + 26;
+	      let v = ((1 - hue) * .75) * 100;
+  	    this.jscolor.fromHSV(h, 100, v);
+  	    console.log('Distance: ' + distance + '; hsv: ' + h + ',1,' + v + '; result: ' + this.jscolor.toString());
         $(this).attr('value', this.jscolor.toString());
 	    });
 	  });
@@ -144,7 +147,7 @@ $(document).ready(function() {
         url: url,
         data: data
       });
-    }, 200);
+    }, 50);
 	});
 });
 
