@@ -4,18 +4,57 @@ import time
 import socket
 import struct
 
+from datetime import datetime
+
+from libs.remoteObj import TcpClient
+
 from django.conf import settings
 
+import random
+
+random.seed(datetime.now())
+
+
 MAX_LEDS = 336
+
+
+class PatchedSerial(serial.Serial):
+    def outWaiting(self):
+        return self.out_waiting
+
+
+if settings.UART_TCP_WRAP:
+    serialClass = TcpClient.wrap(PatchedSerial)
+else:
+    serialClass = PatchedSerial
+
 
 class UartCom(object):
     STRUCT_FORMAT = '>3sHH{length}B'
 
-    def __init__(self, debug=False, baud=38400):
+    def __init__(self, debug=False, baud=settings.UART_BAUD_RATE):
         self.baud = baud
         self.data = []
         self.debug = debug
-        self.connect()
+
+        self._connection = serialClass(
+            port=settings.UART_PORT,
+            baudrate=self.baud,
+            timeout=10,
+            parity= 'E',
+            bytesize=8,
+            stopbits=1,
+        )
+
+    def test_echo(self):
+        failures = []
+        for idx in range(settings.UART_N_ECHO_TEST):
+            data = bytes([random.randint(0x00, 0xff) for x in range(settings.UART_N_ECHO_TEST_BYTES)])
+            self._connection.write(data)
+            result = self._connection.read(self._connection.inWaiting())
+            if result != data:
+                failures.append((idx, data, result))
+        return failures
 
     @property
     def fletcher_checksum(self):
@@ -31,22 +70,15 @@ class UartCom(object):
     def uart_out(self):
         length = len(self.data)
         return struct.pack(
-            self.STRUCT_FORMAT.format(length=length),
-            'TAD'.encode(),
+            self.STRUCT_FORMAT.format(length=length + 1),
+            'DAT'.encode(),
             length,
             self.fletcher_checksum,
-            *self.data
+            *self.data,
+            0,
         )
 
     def connect(self):
-        self._connection = serial.Serial(
-            '/dev/ttyACM99',
-            self.baud,
-            timeout=10,
-            parity= 'N',
-            bytesize=8,
-            stopbits=1
-        )
         if self._connection.isOpen():
             self._connection.close()
         self._connection.open()
@@ -57,50 +89,28 @@ class UartCom(object):
 
         self.data = data
 
-    def write(self,val):
-        self._connection.write(val)
-
-    def read(self,n):
-        return self._connection.read(n)
-
     def write_whole_array(self):
-        arr = []
         if self.debug:
             print("Writing {} bytes of data...".format(len(self.data)))
 
-        length = len(self.data)
-
         start = time.time()
-
         self._connection.write(self.uart_out)
 
-        #self._connection.write(chr((length >> 8) & 0xff))
-        #self._connection.write(chr(length & 0xff))
-
-        #self._connection.write(self.data)
-
-        while self._connection.out_waiting != 0:
-            print("Waiting for output")
+        while self._connection.outWaiting() != 0:
+            pass
 
         if self.debug:
             print("Time to write: %s" % (time.time() - start))
-        self.read(self._connection.in_waiting)
-        while (self._connection.in_waiting != 0):
-            print("SOMETHING'S WAITING FOR ya!")
-            print(self.read(self._connection.in_waiting))
+
+        arr = self._connection.read(self._connection.inWaiting())
+        while self._connection.inWaiting():
+            arr += self._connection.read(self._connection.inWaiting())
 
         end = time.time()
         if self.debug:
             print("Time taken: %s" % (end - start))
 
         return arr
-
-    def close(self):
-        self._connection.close()
-
-    def readline(self):
-        self._lastresponse = self._connection.readline()
-        return self._lastresponse
 
 
 SIMULATOR_SETUP = False
