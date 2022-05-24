@@ -82,7 +82,40 @@ $(document).ready(function() {
 
 	});
 
+	let currentLighting = [];
+
+  let maxHue = 0;
+  let minHue = 0;
+  let maxSat = 0;
+  let minSat = 0;
+  let maxVal = 0;
+  let minVal = 0;
+
+  let readColors = function() {
+    maxHue = parseInt($("#js_color_values > [name=hue_max]")[0].value);
+    minHue = parseInt($("#js_color_values > [name=hue_min]")[0].value);
+
+    maxSat = parseInt($("#js_color_values > [name=saturation_max]")[0].value);
+    minSat = parseInt($("#js_color_values > [name=saturation_min]")[0].value);
+
+    maxVal = parseInt($("#js_color_values > [name=value_max]")[0].value);
+    minVal = parseInt($("#js_color_values > [name=value_min]")[0].value);
+  };
+
+  $("#js_color_values > input").change(function(event) {
+    readColors();
+    for (let entry of currentLighting) {
+    console.log(entry);
+      let hue = entry.__cur_hue
+      entry.fromHSV((hue * (maxHue - minHue)) + minHue,
+                    (hue * (maxSat - minSat)) + minSat,
+                    maxVal - (hue * (maxVal - minVal)));
+    }
+  });
+
 	$(".leddiv").hover(function(event) {
+	  currentLighting = [];
+	  readColors();
 	  $(".leddiv").children('form').children('input.jscolor').each(function (elem) {
 	    this.jscolor.fromRGB(0,0,0);
 	    $(this).attr('value', this.jscolor.toString());
@@ -105,6 +138,7 @@ $(document).ready(function() {
 	  }
 
 	  $(".leddiv").has(selector_x.join(', ')).has(selector_y.join(', ')).each(function (elem) {
+
       let other_x = parseInt($(this).children('.pos_x').html());
 	    let other_y = parseInt($(this).children('.pos_y').html());
 
@@ -115,10 +149,16 @@ $(document).ready(function() {
 
 	    $(this).children('form').children('input.jscolor').each(function (elem) {
 	      let hue = (1 / max_distance) * distance;
-	      let h = (hue * 40) + 26;
-	      let v = ((1 - hue) * .75) * 100;
-  	    this.jscolor.fromHSV(h, 100, v);
-  	    console.log('Distance: ' + distance + '; hsv: ' + h + ',1,' + v + '; result: ' + this.jscolor.toString());
+	      let h = (hue * (maxHue - minHue)) + minHue;
+	      //let v = (1 - hue) * 255;
+	      let v = maxVal - (hue * (maxVal - minVal));
+	      let s = (hue * (maxSat - minSat)) + minSat;
+
+	      this.jscolor.__cur_hue = hue
+	      currentLighting.push(this.jscolor);
+
+  	    this.jscolor.fromHSV(h, s, v);
+  	    console.log('Distance: ' + distance + '; (h,s,v): ' + h + ',100,' + v + '; result: ' + this.jscolor.toString());
         $(this).attr('value', this.jscolor.toString());
 	    });
 	  });

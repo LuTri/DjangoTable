@@ -5,11 +5,11 @@ import sys
 import socket
 
 import inspect
-
-from functools import wraps
-from types import MethodType
+import logging
 
 from django.conf import settings
+
+LOGGER = logging.getLogger('tcp_proxy')
 
 
 class PayloadCommunicator:
@@ -39,9 +39,12 @@ class PayloadCommunicator:
         self._socket.sendall(_data)
 
     def _unpack(self, fmt, n_results=1, fmt_format=None):
+        _dat = b''
         if not isinstance(fmt, struct.Struct):
             fmt = struct.Struct(fmt.format(*fmt_format))
-        _dat = self._socket.recv(fmt.size)
+
+        while len(_dat) != fmt.size:
+            _dat += self._socket.recv(fmt.size)
         result = fmt.unpack(_dat)
         _start = result[0]
         if _start != self.TCP_START:
@@ -166,7 +169,6 @@ class PayloadCommunicator:
         fnc_name = None
 
         missing = [self.TYPE_FNC, self.TYPE_ARG, self.TYPE_KWARG]
-
         for x in range(len(missing)):
             type_char, n = self._unpack_n_type()
             missing.remove(type_char)
@@ -255,12 +257,10 @@ class SerialReader(threading.Thread):
         self.join(2)
 
     def run(self):
-        #sys.stderr.write(f'{threading.get_ident()} (SerialReader): started!\n')
-
+        LOGGER.debug(f'{threading.get_ident()} (SerialReader): started!')
         while self.alive:
             try:
                 fnc_name, args, kwargs = self.communicator.get_invocation()
-                #sys.stderr.write(f'{threading.get_ident()} (SerialReader): {fnc_name=}; {args=}; {kwargs=}\n')
 
                 try:
                     if fnc_name == '_constructor':
@@ -271,20 +271,21 @@ class SerialReader(threading.Thread):
 
                         if callable(data):
                             data = data(*args, **kwargs)
-
+                        LOGGER.debug(f'{threading.get_ident()} (SerialReader): INVC {fnc_name}: {data}')
                         self.communicator.send_result(success=True, result=data)
 
                 except Exception as e:
+                    LOGGER.error(f'{threading.get_ident()} (SerialReader): ERROR {e=}')
                     self.communicator.send_result(success=False, error=e)
 
             except socket.error as exc:
-                #sys.stderr.write(f'{threading.get_ident()} (SerialReader): SOCKET ERR {exc}\n')
+                LOGGER.error(f'{threading.get_ident()} (SerialReader): SOCKET ERROR {exc=}')
                 self.alive = False
             except KeyboardInterrupt:
-                #sys.stderr.write(f'{threading.get_ident()}: KeyboardInterrupt, shutting down.')
+                LOGGER.info(f'{threading.get_ident()} (SerialReader): KeyboardInterrupt, shutting down.')
                 self.alive = False
 
-        #sys.stderr.write(f'{threading.get_ident()} (SerialReader): KILLED!\n')
+        LOGGER.info(f'{threading.get_ident()} (SerialReader): KILLED.')
 
 
 class TcpWrapped:
@@ -337,6 +338,14 @@ class TcpWrapped:
 
 
 class TcpClient(TcpWrapped):
+    _INSTANCE = None
+
+    @classmethod
+    def get_instance(cls, *args, **kwargs):
+        if cls._INSTANCE is None:
+            cls._INSTANCE = cls(*args, **kwargs)
+        return cls._INSTANCE
+
     def __init__(self, remote_addr=None, **kwargs):
         super().__init__(**kwargs)
         self._remote_addr = remote_addr
@@ -366,15 +375,17 @@ class TcpClient(TcpWrapped):
         #print(f'{cls=}, {other_cls=}')
 
         def __other__init__(self, *args, **kwargs):
+            print(f'{type(self)=}')
             #print(f'OTHER_INIT, {args=}, {kwargs=}')
-            self.__tcp = cls(remote_addr=settings.UART_TCP_HOST,
-                             port=settings.UART_TCP_PORT)
+            self.__tcp = cls.get_instance(remote_addr=settings.UART_TCP_HOST,
+                                          port=settings.UART_TCP_PORT)
 
             self.__tcp._connect()
             self.__tcp._communicator.send_fnc('_constructor')
             self.__tcp._communicator.send_args(*args)
             self.__tcp._communicator.send_kwargs(**kwargs)
             result = self.__tcp._communicator.get_result()
+
             if not result.get('success', False):
                 raise result.get(
                     'error',
@@ -388,24 +399,30 @@ class TcpClient(TcpWrapped):
                 self.__tcp._communicator.send_args(*args)
                 self.__tcp._communicator.send_kwargs(**kwargs)
                 result = self.__tcp._communicator.get_result()
-                #print(f'result pre .get= {result}')
+
+                if not result.get('success', False):
+                    raise result.get(
+                        'error',
+                        RuntimeError('Could not retrieve ErrorObject'),
+                    )
                 return result.get('result', None)
             return fnc
 
         attributes = {'__init__': __other__init__}
         dont_add = [
             '__init__',
+            '__new__',
             '__enter__',
             '__exit__',
             '__repr__',
         ]
 
-        def predicate(obj):
-            return inspect.isfunction(obj) or inspect.isdatadescriptor(obj)
-
-        for name, _fnc in inspect.getmembers(other_cls, predicate):
+        for name, _fnc in inspect.getmembers(other_cls, inspect.isfunction):
             if name not in dont_add:
                 attributes.update({name: make_fnc(name)})
+        for name, _fnc in inspect.getmembers(other_cls, inspect.isdatadescriptor):
+            if name not in dont_add:
+                attributes.update({name: property(make_fnc(name))})
 
         return type(
             f'{other_cls.__name__}(RemoteWrapped)',
@@ -434,9 +451,9 @@ class TcpServer(TcpWrapped):
 
         while True:
             self._threads = []
-            #sys.stderr.write('Waiting for connection on {}...\n'.format(self._remote_port))
+            LOGGER.info(f'Waiting for connection on {self._remote_port}...')
             _socket, addr = server.accept()
-            #sys.stderr.write('Connected by {}\n'.format(addr))
+            LOGGER.info(f'Connected by {addr}')
 
             # More quickly detect bad clients who quit without closing the
             # connection: After 1 second of idle, start sending TCP keep-alive
@@ -448,8 +465,7 @@ class TcpServer(TcpWrapped):
                 _socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
                 _socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             except AttributeError as exc:
-                pass  # XXX not available on windows
-                #sys.stderr.write(f'ERROR not available on windows: {exc=}')
+                LOGGER.error(f' not available on windows: {exc=}')
             _socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
             socket_wrapper = SocketWrapper(_socket)

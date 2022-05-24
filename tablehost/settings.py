@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -110,6 +111,11 @@ JINJA_TEMPLATE_DIRS = [
     'templates',
 ]
 
+LOG_LEVEL_DJANGO = 'INFO'
+LOG_LEVEL_UART = 'DEBUG'
+LOG_LEVEL_TCP_PROXY = 'INFO'
+LOG_LEVEL_UART_THREADS = 'DEBUG'
+
 MC_WS2812_CYCLES = 56933
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -125,19 +131,105 @@ SIM_LED_STRUCT = f'24h?'
 
 GIT_REMOTE_NAME = None
 GIT_REMOTE_ACTIVE_BRANCH = None
+
 LOCAL_SERIAL_CLASS = 'tablehost.uart.PatchedSerial'
+
 UART_SIM_PORT = None
 UART_PORT = 'loop://'
-UART_BAUD_RATE = 500000
 UART_TCP_PORT = 7777
 UART_CLIENT_CONNECTION = None
 UART_TCP_WRAP = False
-UART_N_ECHO_TEST = 2000
-UART_N_ECHO_TEST_BYTES = 20
+
+UART_N_ECHO_TEST = 200
+
+UART_BAUD_RATE = 500000
+UART_PARITY_MODE_DEFAULT = 'N'
+UART_STOPBITS_DEFAULT = 1
+UART_BYTESIZE_DEFAULT = 8
+
+UART_INI_FILE = None
+UART_DEFINES_FILE = None
+
+UART_READ_LOGGING = False
+UART_TIMEOUT = 3
 
 REMOTE_SERIAL_HOST_ADDR = 'sheepdroid'
+
+UART_THREADS_LOGS_FILE_PATH = os.path.join(os.curdir, 'venv', 'uart.log')
+UART_THREADS_LOGS_FILE_MAX_BYTES = 2000
+UART_THREADS_LOGS_FILE_BACKUP_COUNT = 3
 
 try:
     from .local_settings import *
 except ImportError:
     pass
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '[%(levelname)s] - %(asctime)s - %(name)s|%(pathname)s:%(lineno)s - %(message)s',
+            'style': '%',
+        },
+        'threaded_fmt': {
+            'format': '[%(name)15s|%(levelname)8s]:%(thread)d|%(process)d - %(asctime)s - %(filename)s.%(funcName)s:%(lineno)s: %(message)s',
+            'datefmt': '%H:%M:%S',
+            'style': '%',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+        'detailed_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'threaded_fmt',
+            'level': 'DEBUG',
+        },
+        'threaded': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'threaded_fmt',
+            'level': 'INFO',
+        },
+        'threaded_files': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'threaded_fmt',
+            'filename': UART_THREADS_LOGS_FILE_PATH,
+            'maxBytes': UART_THREADS_LOGS_FILE_MAX_BYTES,
+            'backupCount': UART_THREADS_LOGS_FILE_BACKUP_COUNT,
+            'level': 'DEBUG',
+        },
+    },
+    'root': {
+        'handlers': [],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'uart_com': {
+            'handlers': ['detailed_console'],
+            'level': LOG_LEVEL_UART,
+            'propagate': True,
+        },
+        'uart_threads': {
+            'handlers': ['threaded', 'threaded_files'],
+            'level': LOG_LEVEL_UART_THREADS,
+            'propagate': True,
+        },
+        'tcp_proxy': {
+            'handlers': ['detailed_console'],
+            'level': LOG_LEVEL_TCP_PROXY,
+            'propagate': True,
+        },
+        'django.server': {
+            'handlers': [],
+            'level': LOG_LEVEL_DJANGO,
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': [],
+            'level': LOG_LEVEL_DJANGO,
+            'propagate': True,
+        },
+    },
+}

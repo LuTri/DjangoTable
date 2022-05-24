@@ -2,9 +2,11 @@
 *.pyc
 *.swp
 /lib
+/lib64
 /include
 /bin
 /local
 /share
 pip-selfcheck.json
 /*/local_settings.py
+pyvenv.cfg

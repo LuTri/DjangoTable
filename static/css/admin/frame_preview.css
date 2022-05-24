@@ -1,0 +1,11 @@
+.admin_preview_pixel {
+  display: inline-block;
+  height: 5px;
+  width: 5px;
+  overflow: hidden;
+}
+
+.admin_preview_row {
+  display: block;
+  height: 5px;
+}

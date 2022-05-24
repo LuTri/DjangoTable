@@ -216,3 +216,8 @@ h1 {
 	position: relative;
 	height: 36px;
 }
+
+
+#js_color_values {
+  float:left;
+}

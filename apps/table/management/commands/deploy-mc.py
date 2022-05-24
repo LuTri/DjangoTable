@@ -3,10 +3,12 @@ from django.core.management import CommandError
 
 from optparse import make_option
 
-import commands
+import subprocess
+
 
 class RetryException(Exception):
 	pass
+
 
 class Command(BaseCommand):
 	max_cmd_tries = 10
@@ -26,12 +28,12 @@ class Command(BaseCommand):
 		opts = ['cd', 'AVRMusicTable', ';'] + opts
 		cmd = ' '.join(opts)
 		if self.verbose:
-			print cmd
+			print(cmd)
 		while tries < 10:
 			try:
-				status, output = commands.getstatusoutput(cmd)
+				status, output = subprocess.getstatusoutput(cmd)
 				if self.verbose:
-					print output
+					print(output)
 				if status != 0:
 					raise RetryException(output)
 				done = True
@@ -74,7 +76,7 @@ class Command(BaseCommand):
 		try:
 			done, output = getattr(self, action)(**options)
 			if done:
-				print "Successfully finished command."
+				print("Successfully finished command.")
 			else:
 				raise CommandError(output)
 		except AttributeError:

@@ -1,16 +1,11 @@
-backports-abc==0.5
-certifi==2018.1.18
-chardet==3.0.4
-Django>=4.0
+Django==3.2.*; platform.machine == 'armv7l'
+Django>=4; platform.machine != 'armv7l'
 idna==2.6
 Jinja2>=3.0
-Pykka==1.2.1
 python-musicpd>=0.7.0
 pytz==2018.3
-requests==2.18.4
-singledispatch==3.4.0.3
-six==1.11.0
-tornado==5.0.1
-urllib3==1.22
 PySerial>=3.5
-mysqlclient>=2.1.0
+psycopg2>=2.9.2; platform.machine == 'armv7l'
+mysqlclient>=2.1.0; platform.machine != 'armv7l'
+numpy>=1.22.3
+scipy>=1.8.0
