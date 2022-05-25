@@ -19,7 +19,7 @@ class SpectralRepresenter:
 
 
 def raise_90(data):
-    return data + 90
+    return data + 90 + 35
 
 
 def log2_modulator(max_val):
@@ -30,6 +30,11 @@ def log2_modulator(max_val):
 
 
 LOG2MOD = log2_modulator(2048)
+
+CURRENT_RANGE = {
+    'min': None,
+    'max': None,
+}
 
 
 class SpectralBarRepresenter(SpectralRepresenter):
@@ -157,18 +162,15 @@ class SpectralBarRepresenter(SpectralRepresenter):
         ref_data = raise_90(ref_data)
         ref_data = LOG2MOD(ref_data)
         _min = 0
-        _max = 50
+        _max = 95
 
         preset = {x: (0, 0, 0) for x in range(self.N_PACKS)}
 
-        bar_data = {'max': [], 'min': [], 'wvg': []}
         _bar_sections = []
 
         for bar in range(self.n_bars):
-            # self.logger.info(f'Slice: {s}')
             _data = ref_data[:, slice(*self.cover_indices[bar] - 1)]
 
-            # self.logger.info(f'Data: {_data}')
             _avg_data = [
                 np.mean(_data[:, 0]),
                 np.mean(_data[:, 1:-1].flatten()),
@@ -184,28 +186,43 @@ class SpectralBarRepresenter(SpectralRepresenter):
             items = sorted([np.max(_data[:, 1:-1]),
                             full_weighted_avg,
                             np.min(_data[:, 1:-1])])
-            #_bar_sections.append(sorted([np.max(_data[:, 1:-1]), full_weighted_avg, np.min(_data[:, 1:-1])]))
 
-            #bar_data['max'].append(np.max(_data[:, 1:-1]))  # max/min swapped since ^-1
-            #bar_data['wvg'].append(full_weighted_avg)
-            #bar_data['min'].append(np.min(_data[:, 1:-1]))
+            tell = False
+            val = np.average(np.array(items))
+            if CURRENT_RANGE['min'] is None or val < CURRENT_RANGE['min']:
+                CURRENT_RANGE['min'] = val
+                tell = True
+            if CURRENT_RANGE['max'] is None or val > CURRENT_RANGE['max']:
+                CURRENT_RANGE['max'] = val
+                tell = True
 
-            refs = np.linspace(_min, _max, 8, endpoint=True, retstep=False)
-            for y in range(8):
-                h = 1/14 * y
+            if tell:
+                print(f'NEW RANGE: {CURRENT_RANGE}')
 
-                if any([c >= refs[y] for c in items]):
-                    m = np.average(np.array(items))
-                    r, g, b = colorsys.hsv_to_rgb(h, 1, (m / _max) * .5)
-                    preset[coord_to_snakish(bar, 7 - y)] = (int(g*0xff) & 0xff,
-                                                            int(r*0xff) & 0xff,
-                                                            int(b*0xff) & 0xff)
+            if 0 < val / _max * 0xFFFF < 0xffff:
+                _bar_sections.append(val / _max * 0xFFFF)
+            elif val / _max * 0xFFFF > 0xffff:
+                _bar_sections.append(0xffff)
+            else:
+                _bar_sections.append(0)
 
-        raw = []
-        for key in sorted(preset.keys()):
-            for item in preset[key]:
-                raw.append(item)
-        writer.command(raw)
+            #refs = np.linspace(_min, _max, 8, endpoint=True, retstep=False)
+            #for y in range(8):
+            #    h = 1/14 * y
+
+            #    if any([c >= refs[y] for c in items]):
+            #        m = np.average(np.array(items))
+            #        r, g, b = colorsys.hsv_to_rgb(h, 1, (m / _max) * .5)
+            #        preset[coord_to_snakish(bar, 7 - y)] = (int(g*0xff) & 0xff,
+            #                                                int(r*0xff) & 0xff,
+            #                                                int(b*0xff) & 0xff)
+
+        #raw = []
+        #for key in sorted(preset.keys()):
+        #    for item in preset[key]:
+        #        raw.append(item)
+        cmd_kwargs = {f'val_{x}': int(value) for x, value in enumerate(_bar_sections)}
+        writer.command(hue_full=240.0, max_intensity=.9, dim_steps=40, **cmd_kwargs)
 
 
 class SpectralAudioBar:
