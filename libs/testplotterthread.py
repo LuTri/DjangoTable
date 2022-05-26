@@ -45,6 +45,8 @@ class Pyplotter:
         plt.cla()
         plt.plot(self._frequencies, self.data)
         plt.ylim((0, 0xffff))
+
+        plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
         plt.show()
         plt.pause(.03)
 
