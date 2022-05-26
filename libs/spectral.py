@@ -1,10 +1,6 @@
 import numpy as np
 import logging
 import time
-import colorsys
-
-from apps.table.helper import coord_to_snakish
-
 
 from scipy import signal
 
@@ -245,7 +241,6 @@ class SpectralAudioBar:
         self.parsed_frames = 0
         self.last_analyzed_frame = 0
         self.last_handled_frame = 0
-
 
         self.previous_plot_time = None
         self.running = True

@@ -1,19 +1,27 @@
+import importlib
+
 from django.core.management import BaseCommand
+from django.conf import settings
 from libs.vbanRelay import VBANCollector
 
 from libs.spectral import SpectralAudioBar
-from tablehost.uart import SoundToLight
-from tablehost.uart import PatchedSerial
 
 
 class Command(VBANCollector, BaseCommand):
     help = "SOUND TO LIGHT TEST (via slaving)."
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        module, klass = settings.VBAN_PRESENTER_CLASS.rsplit('.', 1)
+        module = importlib.import_module(module)
+        self._presenter_class = getattr(module, klass)
+
     def handle(self, *args, slice_size=None, overlap=None, **options):
         self.run()
 
-        slave = SoundToLight(serial_class=PatchedSerial)
-        handler = SpectralAudioBar(verbose=True)
+        slave = self._presenter_class()
+        handler = SpectralAudioBar(verbose=False)
 
         last_frame = 0
         while True:
@@ -26,7 +34,8 @@ class Command(VBANCollector, BaseCommand):
                     #    self.stdout.write(f'Frames skipped: {skipped}')
                     last_frame = _last_frame
                     frequency_domain = handler(frames[-1])
-                    frequency_domain.write(slave)
+                    slave.handle(frequency_domain)
+                    #frequency_domain.write(slave)
             except KeyboardInterrupt:
                 break
 

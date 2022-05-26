@@ -159,6 +159,8 @@ UART_THREADS_LOGS_FILE_PATH = os.path.join(os.curdir, 'venv', 'uart.log')
 UART_THREADS_LOGS_FILE_MAX_BYTES = 2000
 UART_THREADS_LOGS_FILE_BACKUP_COUNT = 3
 
+VBAN_PRESENTER_CLASS = 'tablehost.uart.SoundToLight'
+
 try:
     from .local_settings import *
 except ImportError:

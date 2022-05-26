@@ -33,7 +33,26 @@ def NO_WINDOW(m):
     return None
 
 
-class PyplotThread(threading.Thread):
+class Pyplotter:
+    def __init__(self, *args, **kwargs):
+        plt.ion()
+        self.data = []
+
+    def handle(self, frequency_domain_data):
+        self._frequencies = frequency_domain_data.bar_frequencies
+        frequency_domain_data.write(self)
+
+        plt.cla()
+        plt.plot(self._frequencies, self.data)
+        plt.ylim((0, 0xffff))
+        plt.show()
+        plt.pause(.03)
+
+    def command(self, *args, **kwargs):
+        self.data = [kwargs[key] for key in sorted([key for key in kwargs.keys() if key.startswith('val_')])]
+
+
+class PyplotThread(Pyplotter, threading.Thread):
     PLOT_FREQUENCY_LIMITS = (60, 12000)
 
     WINDOW_FUNCTIONS = [

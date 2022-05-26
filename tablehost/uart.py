@@ -4,7 +4,7 @@ import serial
 import struct
 import threading
 import time
-import traceback
+import importlib
 
 from copy import deepcopy
 from datetime import datetime
@@ -458,7 +458,7 @@ class UartCom(object):
 
     def __init__(self, timeout=settings.UART_TIMEOUT,
                  ini_filename=settings.UART_INI_FILE,
-                 serial_class=serialClass):
+                 serial_class=None):
 
         self._logger = logging.getLogger('uart_com')
 
@@ -477,8 +477,11 @@ class UartCom(object):
             map_get_to=None,
         )
 
+        module, klass = settings.LOCAL_SERIAL_CLASS.rsplit('.', 1)
+        module = importlib.import_module(module)
+
         self.__expected_answers = None
-        self._serial_class = serial_class
+        self._serial_class = serialClass or getattr(module, klass)
         self.__connection = None
 
         self.data = []
@@ -783,3 +786,6 @@ class LedWriter(UartCom):
 
 class SoundToLight(UartCom):
     CMD = 'CMD_SOUNDTOLIGHT'
+
+    def handle(self, frequency_domain_data):
+        frequency_domain_data.write(self)
