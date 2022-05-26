@@ -2,6 +2,8 @@ import numpy as np
 import logging
 import time
 
+from django.conf import settings
+
 from scipy import signal
 
 
@@ -36,7 +38,6 @@ CURRENT_RANGE = {
 class SpectralBarRepresenter(SpectralRepresenter):
     N_PACKS = 112
 
-    DEFAULT_FREQUENCY_RANGE = (60, 12000)
     DEFAULT_N_BARS = 14
 
     def __init__(self, *args, frequency_range=None, n_bars=None, **kwargs):
@@ -70,7 +71,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
     @property
     def frequency_range(self):
         if self.__frequency_range is None:
-            self.__frequency_range = self.DEFAULT_FREQUENCY_RANGE
+            self.__frequency_range = settings.PRESENTER_FREQUENCY_RANGE
             # Reset depending properties
             self.__bar_frequency_values = None
         return self.__frequency_range
