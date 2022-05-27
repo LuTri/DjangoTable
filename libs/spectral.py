@@ -219,7 +219,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
         #    for item in preset[key]:
         #        raw.append(item)
         cmd_kwargs = {f'val_{x}': int(value) for x, value in enumerate(_bar_sections)}
-        writer.command(hue_full=240.0, max_intensity=.9, dim_steps=40, **cmd_kwargs)
+        writer.command(hue_full=120.0, target_hue=.5, max_intensity=.7, dim_steps=40, **cmd_kwargs)
 
 
 class SpectralAudioBar:
