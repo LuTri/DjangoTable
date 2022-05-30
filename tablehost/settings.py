@@ -162,6 +162,10 @@ UART_THREADS_LOGS_FILE_BACKUP_COUNT = 3
 
 VBAN_PRESENTER_CLASS = 'tablehost.uart.SoundToLight'
 
+STL_MAX_INTENSITY = .7
+STL_DIM_DELAY = 1000
+STL_DIM_STEPS = 40
+
 try:
     from .local_settings import *
 except ImportError:
