@@ -1,4 +1,5 @@
 import importlib
+import os
 
 from django.utils import autoreload
 from django.core.management import BaseCommand
@@ -18,6 +19,11 @@ class Command(VBANCollector, BaseCommand):
         module, klass = settings.VBAN_PRESENTER_CLASS.rsplit('.', 1)
         module = importlib.import_module(module)
         presenter_class = getattr(module, klass)
+
+        self.stderr.write(f'Config:', ending=os.linesep)
+        self.stderr.write(f'{settings.PRESENTER_VALUE_LIMITS=}', ending=os.linesep)
+        self.stderr.write(f'{settings.PRESENTER_FREQUENCY_RANGE=}', ending=os.linesep)
+        self.stderr.write(f'{settings.VBAN_SAMPLES_PROCESSED=}', ending=os.linesep)
 
         self.run()
 

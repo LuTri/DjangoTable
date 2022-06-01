@@ -9,9 +9,32 @@ import time
 import warnings
 
 from scipy import signal
-
+from matplotlib.collections import CircleCollection
 
 mpl.rcParams['savefig.pad_inches'] = 0
+
+
+SEC_COLORS = list(reversed([
+    .0,
+    20.0,
+    62.0,
+    115.0,
+    120.0,
+    120.0,
+    120.0,
+    120.0,
+]))
+
+
+def get_section_color(value):
+    _step = 0xFFFF / 8
+    _refs = np.linspace(-(_step / 2), 0xFFFF - (_step / 2), num=8, endpoint=True)
+
+    col_idx = np.searchsorted(_refs, value) - 1
+    hue = SEC_COLORS[col_idx] / 360.0
+
+    r, g, b = colorsys.hsv_to_rgb(hue, 1, 1)
+    return f'#{hex(int(r * 0xff))[2:]:>02}{hex(int(g * 0xff))[2:]:>02}{hex(int(b * 0xff))[2:]:>02}'
 
 
 def kaiser_proxy(num):
@@ -36,6 +59,8 @@ def NO_WINDOW(m):
 class Pyplotter:
     def __init__(self, *args, **kwargs):
         plt.ion()
+        self._fig, self._ax = plt.subplots()
+
         self.data = []
         self._orig_max = None
         self._orig_min = None
@@ -49,10 +74,15 @@ class Pyplotter:
 
             self._min = min([np.min(self.data), np.min(originals)] + ([self._min] if self._min is not None else []))
             self._max = max([np.max(self.data), np.max(originals)] + ([self._max] if self._max is not None else []))
+            self._ax.cla()
 
-            plt.cla()
-            plt.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
-            plt.plot(self._frequencies, self.data)
+            _points = np.stack([np.array(self._frequencies).flatten(), np.array(self.data).flatten()])
+            segments = np.swapaxes(_points, 1, 0)
+            lc = CircleCollection([90], offsets=segments, transOffset=self._ax.transData, facecolors=[get_section_color(v) for v in self.data])
+            self._ax.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
+            self._ax.add_collection(lc)
+            self._ax.plot(self._frequencies, self.data)
+            #self._ax.plot(self._frequencies, self.data, 'o', fillstyle='full', color=)
             #
             # _ref = np.max(np.array(self.data))
             #
@@ -66,9 +96,9 @@ class Pyplotter:
             #
             #     plt.plot(self._frequencies, scaled + scaled_max_diff, color=col, label=f'offset: {offset}')
 
-            plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
+            self._ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
-            plt.vlines(self._frequencies, 0, 0xFFFF)
+            self._ax.vlines(self._frequencies, 0, 0xFFFF)
             #plt.vlines(frequency_domain_data.sampled_frequencies, 0xffff, 0xffff + 20000, colors=['red'])
             #plt.vlines(self._frequencies + (frequency_domain_data.bar_width / 2), 0, 0xffff + 20000, colors=['#00FF0088'])
 
@@ -80,9 +110,9 @@ class Pyplotter:
             #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0xffff - 200),
             #                rotation=300)
 
-            plt.ylim((0, self._max))
+            self._ax.set_ylim((0, self._max))
             #plt.legend()
-            plt.xlim((0, 4000))
+            self._ax.set_xlim((0, 4000))
             plt.show()
             plt.pause(.03)
 
