@@ -3,6 +3,8 @@ import struct
 import threading
 import logging
 
+from django.conf import settings
+
 import numpy as np
 
 
@@ -67,11 +69,13 @@ class VBANReceiver(threading.Thread):
     ]
 
     def __init__(self, caller, senderIp=None, port=52000,
-                 stream='SheepdroidVban', verbose=False, daemon=True, *args,
-                 **kwargs):
+                 stream='SheepdroidVban', verbose=False, daemon=True,
+                 required_samples=None,
+                 *args, **kwargs):
         super().__init__(*args, daemon=daemon, **kwargs)
 
         self.rec_couner = 0
+        self.required_samples = required_samples or settings.VBAN_SAMPLES_PROCESSED
 
         self.caller = caller
         self.logger = logging.getLogger('uart_threads')
@@ -102,6 +106,8 @@ class VBANReceiver(threading.Thread):
         self.rawData = None
         self.subprotocol = 0
         self.logger.info(f'Fully initialized {self.__class__.__name__}')
+
+        self.sample_buffer = None
 
     def _cutAtNullByte(self, stri):
         return stri.decode('utf-8').split("\x00")[0]
@@ -158,13 +164,21 @@ class VBANReceiver(threading.Thread):
             self.stream_chanNum
         )
 
-        self.caller.push_pcm(PCMData(
-            np.array(data_struct.unpack(data[self.HEADER_FORMAT.size:])),
-            self.stream_chanNum,
-            self.stream_sampRate,
-            self.stream_sampNum,
-            self.stream_frameCounter,
-        ))
+        t_samples = np.array(data_struct.unpack(data[self.HEADER_FORMAT.size:]))
+        if self.sample_buffer is None:
+            self.sample_buffer = t_samples
+        else:
+            self.sample_buffer = np.concatenate([self.sample_buffer, t_samples])
+
+        if len(self.sample_buffer) / self.stream_chanNum >= self.required_samples:
+            self.caller.push_pcm(PCMData(
+                np.copy(self.sample_buffer),
+                self.stream_chanNum,
+                self.stream_sampRate,
+                int(len(self.sample_buffer) / self.stream_chanNum),
+                self.stream_frameCounter,
+            ))
+            self.sample_buffer = self.sample_buffer[self.stream_sampNum * self.stream_chanNum:]
 
         self.rec_couner += 1
         if self.rec_couner % 6000 == 0:

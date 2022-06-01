@@ -20,14 +20,33 @@ def raise_90(data):
     return data + 90 + 35
 
 
-def log2_modulator(max_val):
+def log2_modulator(offset=6, end_val=3):
     def modulate(data):
-        mod = np.log2(np.linspace(1, max_val, num=129, endpoint=True))
-        return data * (mod / np.max(mod))
+        mod = np.log2(np.linspace(1, end_val, num=np.max(data.shape) + offset, endpoint=True))
+        print(f'{mod=}')
+        return data * (mod[offset] / np.max(mod))
     return modulate
 
 
-LOG2MOD = log2_modulator(2048)
+def _linear(start_y=.8, end_y=1.8, b=0):
+
+    def mod(data):
+        factors = np.linspace(start_y, end_y, num=len(data), endpoint=False)
+        return data * factors + 0
+    return mod
+
+
+# def linear_modulator(data):
+#     m = (settings.PRESENTER_FREQUENCY_RANGE[1] - settings.PRESENTER_FREQUENCY_RANGE[0]) / 14
+#
+#     factors = np.linspace(0, len(data), num=len(data), endpoint=False, dtype='int') * -m
+#
+#     return data * factors
+
+linear_modulator = _linear()
+
+
+LOG2MOD = log2_modulator(offset=1, end_val=2048)
 
 CURRENT_RANGE = {
     'min': None,
@@ -128,11 +147,11 @@ class SpectralBarRepresenter(SpectralRepresenter):
         if self.__cover_indices is None:
             _left_nearest = np.searchsorted(
                 self.sampled_frequencies,
-                self.bar_frequencies
-            )
+                self.bar_frequencies - (self.bar_width / 2)
+            ) - 1
             _right_nearest = np.searchsorted(
                 self.sampled_frequencies,
-                self.bar_frequencies + self.bar_width
+                self.bar_frequencies + (self.bar_width / 2)
             )
 
             self.__cover_indices = np.swapaxes(
@@ -147,45 +166,57 @@ class SpectralBarRepresenter(SpectralRepresenter):
         if self.__sample_distances is None:
             self.__sample_distances = [
                 np.absolute(np.array(
-                    self._frequencies[slice(*self.cover_indices[idx] - 1)]
+                    self._frequencies[slice(*self.cover_indices[idx])]
                 ) - bar) for idx, bar in enumerate(self.bar_frequencies)
             ]
         return self.__sample_distances
 
     def write(self, writer):
-        ref_data = [self._data, self._data]
-        ref_data = np.array(ref_data)
+        #print(f'{self.sample_distances=}')
+        #print(f'{self.cover_indices=}')
+        #print(f'{self.bar_frequencies=}')
+        #print(f'{self.bar_width=}')
 
-        ref_data = raise_90(ref_data)
-        ref_data = LOG2MOD(ref_data)
+        #ref_data = [self._data, self._data]
+        #ref_data = np.array(ref_data)
+
+        #ref_data = raise_90(ref_data)
+        #ref_data = LOG2MOD(ref_data)
+
+        #ref_data = ref_data / 100
+
+        #print(f'{ref_data=}')
+
         _min = 0
-        _max = 95
-
-        preset = {x: (0, 0, 0) for x in range(self.N_PACKS)}
+        _max = 130
 
         _bar_sections = []
 
+        #total_energy = self._data[0]
+        total_energy = 10
+
         for bar in range(self.n_bars):
-            _data = ref_data[:, slice(*self.cover_indices[bar] - 1)]
-
-            _avg_data = [
-                np.mean(_data[:, 0]),
-                np.mean(_data[:, 1:-1].flatten()),
-                np.mean(_data[:, -1]),
-            ]
-
-            relevant_data = np.average(
-                np.array(ref_data)[:, slice(*self.cover_indices[bar] - 1)],
-                axis=0
-            )
-            full_weighted_avg = np.average(relevant_data,
-                                           weights=self.sample_distances[bar])
-            items = sorted([np.max(_data[:, 1:-1]),
-                            full_weighted_avg,
-                            np.min(_data[:, 1:-1])])
+            _data = self._data[slice(*self.cover_indices[bar])]
+            #print(f'Data for {bar}: {_data}')
+            #
+            # _avg_data = [
+            #     np.mean(_data[0]),
+            #     np.mean(_data[1:-1].flatten()),
+            #     np.mean(_data[-1]),
+            # ]
+            #
+            # full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
+            #                                weights=self.sample_distances[bar])
+            # items = sorted([np.max(_data),
+            #                 full_weighted_avg,
+            #                 np.min(_data)])
 
             tell = False
-            val = np.average(np.array(items))
+            #print(f'Items for {bar}: {items}')
+            #val = np.max(np.array(items))
+            #val = full_weighted_avg
+            val = np.mean(_data)
+            #print(f'Val for {bar}: {val=}')
             if CURRENT_RANGE['min'] is None or val < CURRENT_RANGE['min']:
                 CURRENT_RANGE['min'] = val
                 tell = True
@@ -196,12 +227,21 @@ class SpectralBarRepresenter(SpectralRepresenter):
             if tell:
                 print(f'NEW RANGE: {CURRENT_RANGE}')
 
-            if 0 < val / _max * 0xFFFF < 0xffff:
-                _bar_sections.append(val / _max * 0xFFFF)
-            elif val / _max * 0xFFFF > 0xffff:
-                _bar_sections.append(0xffff)
-            else:
-                _bar_sections.append(0)
+            # if 0 < val / _max * 0xFFFF < 0xffff:
+            #     _bar_sections.append(val / _max * 0xFFFF)
+            # elif val / _max * 0xFFFF > 0xffff:
+            #     _bar_sections.append(0xffff)
+            # else:
+            #     _bar_sections.append(0)
+
+            # if 0 < 0xFFFF + (val * 0xFFFF) < 0xffff:
+            #     _bar_sections.append(0xFFFF + (val * 0xFFFF))
+            # elif 0xFFFF + (val * 0xFFFF) > 0xffff:
+            #     _bar_sections.append(0xffff)
+            # else:
+            #     _bar_sections.append(0)
+            _bar_sections.append((val / total_energy) * 0xFFFF)
+            #print(f'int16 val for {bar}: {_bar_sections[-1]}')
 
             #refs = np.linspace(_min, _max, 8, endpoint=True, retstep=False)
             #for y in range(8):
@@ -218,7 +258,13 @@ class SpectralBarRepresenter(SpectralRepresenter):
         #for key in sorted(preset.keys()):
         #    for item in preset[key]:
         #        raw.append(item)
+        #print(f'N_vals: {len(_bar_sections)}')
+
+        _bar_sections = np.array(_bar_sections)
+        _bar_sections[~np.isfinite(_bar_sections)] = 0
+
         cmd_kwargs = {f'val_{x}': int(value) for x, value in enumerate(_bar_sections)}
+
         writer.command(max_intensity=settings.STL_MAX_INTENSITY,
                        dim_steps=settings.STL_DIM_STEPS,
                        dim_delay=settings.STL_DIM_DELAY,
@@ -298,16 +344,29 @@ class SpectralAudioBar:
         # Convert to dBFS
         return frequencies, 20 * np.log10(s_magnitude / ref)
 
-    def process_data(self, sample_rate, fft_size=None, slice_size=None, overlap=None):
+    def process_data(self, sample_rate, fft_size=None):
         timing = time.time()
         if fft_size is None:
             fft_size = len(self.frame_buffer)
 
-        frequencies, s_dbfs = self.fft_frequency_domain(
+        frequencies, Pxx_den = signal.welch(
+            self.frame_buffer,
             sample_rate,
-            signal.windows.flattop(fft_size),
+            window='boxcar',
+            nperseg=settings.VBAN_SAMPLES_PROCESSED / 2,
+            noverlap=settings.VBAN_SAMPLES_PROCESSED / 4,
+            nfft=settings.VBAN_SAMPLES_PROCESSED,
+            scaling='spectrum',
+            detrend='constant',
+            return_onesided=True,
+            average='mean'
         )
-        representer = SpectralBarRepresenter(frequency_domain_data=s_dbfs,
+
+        Pxx_den[Pxx_den == 0.] = 1.
+        Pxx_den = np.log10(Pxx_den)
+        Pxx_den[~np.isfinite(Pxx_den)] = 0
+
+        representer = SpectralBarRepresenter(frequency_domain_data=Pxx_den,
                                              frequencies=frequencies)
         if self.verbose:
             time_passed = time.time() - timing
@@ -321,8 +380,7 @@ class SpectralAudioBar:
             )
         return representer
 
-    def __call__(self, signal_object, data_channel=0, fft_size=None,
-                 slice_size=None, overlap=None):
+    def __call__(self, signal_object, data_channel=0, fft_size=None):
         if self.byte_size(self.frame_buffer) > self.MAX_BYTE_BUFFER:
 
             self.frame_buffer = self.frame_buffer[self.byte_size(signal_object.data[:, data_channel]):]
@@ -333,6 +391,4 @@ class SpectralAudioBar:
         return self.process_data(
             signal_object.sample_rate,
             fft_size or signal_object.n_samples,
-            slice_size,
-            overlap,
         )

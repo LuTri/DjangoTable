@@ -37,21 +37,62 @@ class Pyplotter:
     def __init__(self, *args, **kwargs):
         plt.ion()
         self.data = []
+        self._orig_max = None
+        self._orig_min = None
+        self._frequencies = None
+        self._min = None
+        self._max = None
+
+    def do_plot(self, frequency_domain_data, originals):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            self._min = min([np.min(self.data), np.min(originals)] + ([self._min] if self._min is not None else []))
+            self._max = max([np.max(self.data), np.max(originals)] + ([self._max] if self._max is not None else []))
+
+            plt.cla()
+            plt.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
+            plt.plot(self._frequencies, self.data)
+
+            #plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
+
+            plt.vlines(self._frequencies, self._min, self._max)
+            #plt.vlines(frequency_domain_data.sampled_frequencies, 0xffff, 0xffff + 20000, colors=['red'])
+            #plt.vlines(self._frequencies + (frequency_domain_data.bar_width / 2), 0, 0xffff + 20000, colors=['#00FF0088'])
+
+            #for idx, vline_value in enumerate(self._frequencies):
+            #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0),
+            #               rotation=300)
+
+            #for idx, vline_value in enumerate(frequency_domain_data.sampled_frequencies):
+            #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0xffff - 200),
+            #                rotation=300)
+
+            plt.ylim((0, self._max))
+            plt.xlim((0, 4000))
+            plt.show()
+            plt.pause(.03)
 
     def handle(self, frequency_domain_data):
         self._frequencies = frequency_domain_data.bar_frequencies
         frequency_domain_data.write(self)
 
-        plt.cla()
-        plt.plot(self._frequencies, self.data)
-        plt.ylim((0, 0xffff))
+        originals = np.array(frequency_domain_data._data)
+        _max = np.max(originals)
+        _min = np.min(originals)
 
-        plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
-        plt.show()
-        plt.pause(.03)
+        if self._orig_max is None or self._orig_max < _max:
+            self._orig_max = _max
+            print(f'New orig max: {_max}')
+
+        if self._orig_min is None or self._orig_min > _min:
+            self._orig_min = _min
+            print(f'New orig min: {_min}')
+
+        self.do_plot(frequency_domain_data, originals)
 
     def command(self, *args, **kwargs):
-        self.data = [kwargs[key] for key in sorted([key for key in kwargs.keys() if key.startswith('val_')])]
+        self.data = [kwargs[key] for key in sorted([key for key in kwargs.keys() if key.startswith('val_')], key=lambda k: int(k[4:]))]
 
 
 class PyplotThread(Pyplotter, threading.Thread):

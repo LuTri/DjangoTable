@@ -1,5 +1,6 @@
 import importlib
 
+from django.utils import autoreload
 from django.core.management import BaseCommand
 from django.conf import settings
 from libs.vbanRelay import VBANCollector
@@ -13,14 +14,14 @@ class Command(VBANCollector, BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def inner_run(self, **options):
         module, klass = settings.VBAN_PRESENTER_CLASS.rsplit('.', 1)
         module = importlib.import_module(module)
-        self._presenter_class = getattr(module, klass)
+        presenter_class = getattr(module, klass)
 
-    def handle(self, *args, slice_size=None, overlap=None, **options):
         self.run()
 
-        slave = self._presenter_class()
+        slave = presenter_class()
         handler = SpectralAudioBar(verbose=False)
 
         last_frame = 0
@@ -40,3 +41,6 @@ class Command(VBANCollector, BaseCommand):
                 break
 
         self.quit()
+
+    def handle(self, *args, **options):
+        autoreload.run_with_reloader(self.inner_run, **options)
