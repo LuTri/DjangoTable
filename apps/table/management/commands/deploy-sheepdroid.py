@@ -125,11 +125,11 @@ class Command(BaseCommand):
         try:
             self._handle_repo(self._local_repo)
 
-            _url, _path = self._local_repo.remotes.origin.url.split(':')
             status, value = self._run_shell_command(
                 ['ssh', '-i', 'sheepdroidDevDevploy',
                  f'{settings.ODROID_HOST_USER}@{settings.ODROID_HOST_NAME}',
-                 (f'"cd {_path}; git fetch origin && git reset --hard '
+                 (f'"cd {settings.ODROID_PROJECT_PATH}; git fetch origin && '
+                  f'git reset --hard '
                   f'origin/{self.tmp_branch} && git submodule update --init '
                   f'--recursive"')]
             )

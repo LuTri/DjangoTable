@@ -129,6 +129,10 @@ SIM_FPS = None
 SIM_PARAM_STRUCT = 'III????I'
 SIM_LED_STRUCT = f'24h?'
 
+ODROID_HOST_USER = 'tristan'
+ODROID_HOST_NAME = 'sheepdroid'
+ODROID_PROJECT_PATH = 'projects/DjangoTable.git'
+
 GIT_REMOTE_NAME = None
 GIT_REMOTE_ACTIVE_BRANCH = 'indev'
 
