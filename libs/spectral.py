@@ -281,7 +281,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
         _bar_sections = _bar_sections + np.abs(np.max(_bar_sections) - _ref_max)
 
-        cmd_kwargs = {f'val_{x}': int(value) for x, value in enumerate(_bar_sections)}
+        cmd_kwargs = {f'val_{x}': int(max([min([value, 0xFFFF]), 0])) for x, value in enumerate(_bar_sections)}
 
         writer.command(max_intensity=settings.STL_MAX_INTENSITY,
                        dim_steps=settings.STL_DIM_STEPS,
