@@ -54,9 +54,9 @@ class Pyplotter:
             plt.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
             plt.plot(self._frequencies, self.data)
 
-            #plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
+            plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
-            plt.vlines(self._frequencies, self._min, self._max)
+            plt.vlines(self._frequencies, 0, 0xFFFF)
             #plt.vlines(frequency_domain_data.sampled_frequencies, 0xffff, 0xffff + 20000, colors=['red'])
             #plt.vlines(self._frequencies + (frequency_domain_data.bar_width / 2), 0, 0xffff + 20000, colors=['#00FF0088'])
 

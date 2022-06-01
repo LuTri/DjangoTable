@@ -193,7 +193,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
         _bar_sections = []
 
         #total_energy = self._data[0]
-        total_energy = 10
+        total_energy = 20
 
         for bar in range(self.n_bars):
             _data = self._data[slice(*self.cover_indices[bar])]
@@ -205,8 +205,9 @@ class SpectralBarRepresenter(SpectralRepresenter):
             #     np.mean(_data[-1]),
             # ]
             #
-            # full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
-            #                                weights=self.sample_distances[bar])
+            #full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
+            #                               weights=self.sample_distances[bar])
+            rss = np.sqrt(np.sum(self._data[slice(*self.cover_indices[bar])] ** 2))
             # items = sorted([np.max(_data),
             #                 full_weighted_avg,
             #                 np.min(_data)])
@@ -214,8 +215,14 @@ class SpectralBarRepresenter(SpectralRepresenter):
             tell = False
             #print(f'Items for {bar}: {items}')
             #val = np.max(np.array(items))
-            #val = full_weighted_avg
-            val = np.mean(_data)
+            val = (rss / total_energy) * 0xFFFF
+            val_limits = settings.PRESENTER_VALUE_LIMITS
+            abs_val_range = val_limits[1] + val_limits[0]
+            scaler = abs_val_range / 0xffff
+
+            val = val * scaler - val_limits[0]
+
+            #val = np.max(_data)
             #print(f'Val for {bar}: {val=}')
             if CURRENT_RANGE['min'] is None or val < CURRENT_RANGE['min']:
                 CURRENT_RANGE['min'] = val
@@ -240,7 +247,8 @@ class SpectralBarRepresenter(SpectralRepresenter):
             #     _bar_sections.append(0xffff)
             # else:
             #     _bar_sections.append(0)
-            _bar_sections.append((val / total_energy) * 0xFFFF)
+
+            _bar_sections.append(val)
             #print(f'int16 val for {bar}: {_bar_sections[-1]}')
 
             #refs = np.linspace(_min, _max, 8, endpoint=True, retstep=False)
