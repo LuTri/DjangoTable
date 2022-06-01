@@ -195,6 +195,8 @@ class SpectralBarRepresenter(SpectralRepresenter):
         #total_energy = self._data[0]
         total_energy = 20
 
+        _ref_max = 0
+
         for bar in range(self.n_bars):
             _data = self._data[slice(*self.cover_indices[bar])]
             #print(f'Data for {bar}: {_data}')
@@ -216,11 +218,17 @@ class SpectralBarRepresenter(SpectralRepresenter):
             #print(f'Items for {bar}: {items}')
             #val = np.max(np.array(items))
             val = (rss / total_energy) * 0xFFFF
+            _ref_max = max([_ref_max, val])
+
             val_limits = settings.PRESENTER_VALUE_LIMITS
             abs_val_range = val_limits[1] + val_limits[0]
-            scaler = abs_val_range / 0xffff
 
-            val = val * scaler - val_limits[0]
+            scaler = abs_val_range / val_limits[1]
+            scaled = val * scaler - val_limits[0]
+
+            val = scaled
+
+            #val = val * scaler - val_limits[0]
 
             #val = np.max(_data)
             #print(f'Val for {bar}: {val=}')
@@ -270,6 +278,8 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
         _bar_sections = np.array(_bar_sections)
         _bar_sections[~np.isfinite(_bar_sections)] = 0
+
+        _bar_sections = _bar_sections + np.abs(np.max(_bar_sections) - _ref_max)
 
         cmd_kwargs = {f'val_{x}': int(value) for x, value in enumerate(_bar_sections)}
 

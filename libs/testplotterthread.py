@@ -53,6 +53,18 @@ class Pyplotter:
             plt.cla()
             plt.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
             plt.plot(self._frequencies, self.data)
+            #
+            # _ref = np.max(np.array(self.data))
+            #
+            # for offset, col in [(0, '#ff5555'), (1000, '#55ff55'), (10000, '#5555ff'), (30000, '#ff00ff'), (50000, '#00ffff')]:
+            #     abs_val_range = 0xffff + offset
+            #     scaler = abs_val_range / 0xffff
+            #
+            #     scaled = np.array(self.data) * scaler - offset
+            #
+            #     scaled_max_diff = np.abs(np.max(scaled) - _ref)
+            #
+            #     plt.plot(self._frequencies, scaled + scaled_max_diff, color=col, label=f'offset: {offset}')
 
             plt.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
@@ -69,6 +81,7 @@ class Pyplotter:
             #                rotation=300)
 
             plt.ylim((0, self._max))
+            #plt.legend()
             plt.xlim((0, 4000))
             plt.show()
             plt.pause(.03)
