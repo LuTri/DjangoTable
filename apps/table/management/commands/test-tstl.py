@@ -44,26 +44,38 @@ class Command(VBANCollector, BaseCommand):
                 ))
                 t_data = None
 
-        self.plotter = Pyplotter(ion=False, n_frames=len(self.large_data), frame_update_fnc=self.get_frame_updater())
+        self.plotter = Pyplotter(
+            ion=False,
+            n_frames=len(self.large_data),
+            frame_update_fnc=self.get_frame_updater(),
+            window_update_fnc=self.get_window_updater(),
+            modulator_cb=self.get_modulator_update_cb(),
+        )
         self.audi_bar = SpectralAudioBar()
 
-    def get_frame_updater(self):
+    def get_modulator_update_cb(self):
+        def cb():
+            print(f'CALLED MCB')
+            self.present_frame(self.frame_idx)
+        return cb
 
+    def get_frame_updater(self):
         def updater(frame_idx):
             self.frame_idx = frame_idx
             self.present_frame(frame_idx)
 
         return updater
 
-    def get_window_update(self):
-
-        def updater(idx):
-            self.window_fnc = AVAILABLE_WINDOWS[idx]
+    def get_window_updater(self):
+        def updater(fnc_name):
+            self.window_fnc = fnc_name
             self.present_frame(self.frame_idx)
         return updater
 
     def present_frame(self, idx):
-        self.plotter.handle(self.audi_bar(self.large_data[idx], window_fnc=self.window_fnc))
+        self.plotter.handle(
+            self.audi_bar(self.large_data[idx], window_fnc=self.window_fnc)
+        )
 
     def handle(self, *args, **options):
         self.present_frame(0)
