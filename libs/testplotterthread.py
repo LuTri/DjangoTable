@@ -8,8 +8,12 @@ import matplotlib.pyplot as plt
 import time
 import warnings
 
+from django.conf import settings
 from scipy import signal
 from matplotlib.collections import CircleCollection
+from matplotlib import widgets
+import matplotlib.gridspec as gridspec
+
 
 mpl.rcParams['savefig.pad_inches'] = 0
 
@@ -25,6 +29,25 @@ SEC_COLORS = list(reversed([
     120.0,
 ]))
 
+AVAILABLE_WINDOWS = [
+    'boxcar',
+    'triang',
+    'blackman',
+    'hamming',
+    'hann',
+    'bartlett',
+    'flattop',
+    'parzen',
+    'bohman',
+    'blackmanharris',
+    'nuttall',
+    'barthann',
+    'cosine',
+    'exponential',
+    'tukey',
+    'taylor',
+
+]
 
 def get_section_color(value):
     _step = 0xFFFF / 8
@@ -56,10 +79,41 @@ def NO_WINDOW(m):
     return None
 
 
+def choose_window(window):
+    print(f'{window=}')
+
+
 class Pyplotter:
-    def __init__(self, *args, **kwargs):
-        plt.ion()
-        self._fig, self._ax = plt.subplots()
+    def __init__(self, ion=True, n_frames=None, frame_update_fnc=None, window_update_fnc=None, modulator_update_fnc=None, *args, **kwargs):
+        if ion:
+            plt.ion()
+        self.ion = ion
+
+        self._fig = plt.figure()
+
+        gs0 = gridspec.GridSpec(2, 1, self._fig)
+        gs00 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs0[0])
+        gs01 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[1])
+
+        self.parent_ax = self._fig.add_subplot(gs00[-1, :-2])
+        self.dropdown_ax = self._fig.add_subplot(gs00[-1, -2])
+        self.modulator_ax = self._fig.add_subplot(gs00[-1, -1])
+
+        self.frame_ax = self._fig.add_subplot(gs01[0])
+
+        plt.tight_layout()
+
+        #self.widget_ax = plt.axes([0.25, 0.1, 0.65, 0.03],
+#                                  facecolor='lightgoldenrodyellow')
+        self.widgets = {
+            'window': widgets.RadioButtons(self.dropdown_ax, labels=AVAILABLE_WINDOWS, active=0),
+            'frame': widgets.Slider(self.frame_ax, 'Frame nr:', valmin=0, valmax=n_frames - 1, valstep=1),
+            'modulator': widgets.RadioButtons(self.modulator_ax, labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'weighted_avg'], active=2)
+
+        }
+        self.widgets['frame'].on_changed(frame_update_fnc)
+        self.widgets['window'].on_clicked(window_update_fnc)
+        self.widgets['modulator'].on_clicked(modulator_update_fnc)
 
         self.data = []
         self._orig_max = None
@@ -74,14 +128,14 @@ class Pyplotter:
 
             self._min = min([np.min(self.data), np.min(originals)] + ([self._min] if self._min is not None else []))
             self._max = max([np.max(self.data), np.max(originals)] + ([self._max] if self._max is not None else []))
-            self._ax.cla()
+            self.parent_ax.cla()
 
             _points = np.stack([np.array(self._frequencies).flatten(), np.array(self.data).flatten()])
             segments = np.swapaxes(_points, 1, 0)
-            lc = CircleCollection([90], offsets=segments, transOffset=self._ax.transData, facecolors=[get_section_color(v) for v in self.data])
-            self._ax.plot(frequency_domain_data.sampled_frequencies, originals, color='red')
-            self._ax.add_collection(lc)
-            self._ax.plot(self._frequencies, self.data)
+            lc = CircleCollection([90], offsets=segments, transOffset=self.parent_ax.transData, facecolors=[get_section_color(v) for v in self.data])
+            self.parent_ax.plot(frequency_domain_data.sampled_frequencies, originals * (np.max(self.data) / np.max(originals)), color='red')
+            self.parent_ax.add_collection(lc)
+            self.parent_ax.plot(self._frequencies, self.data)
             #self._ax.plot(self._frequencies, self.data, 'o', fillstyle='full', color=)
             #
             # _ref = np.max(np.array(self.data))
@@ -96,9 +150,9 @@ class Pyplotter:
             #
             #     plt.plot(self._frequencies, scaled + scaled_max_diff, color=col, label=f'offset: {offset}')
 
-            self._ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
+            self.parent_ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
-            self._ax.vlines(self._frequencies, 0, 0xFFFF)
+            self.parent_ax.vlines(self._frequencies, 0, 0xFFFF)
             #plt.vlines(frequency_domain_data.sampled_frequencies, 0xffff, 0xffff + 20000, colors=['red'])
             #plt.vlines(self._frequencies + (frequency_domain_data.bar_width / 2), 0, 0xffff + 20000, colors=['#00FF0088'])
 
@@ -110,11 +164,12 @@ class Pyplotter:
             #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0xffff - 200),
             #                rotation=300)
 
-            self._ax.set_ylim((0, self._max))
+            self.parent_ax.set_ylim((0, self._max))
             #plt.legend()
-            self._ax.set_xlim((0, 4000))
+            self.parent_ax.set_xlim(settings.PRESENTER_FREQUENCY_RANGE)
             plt.show()
-            plt.pause(.03)
+            if self.ion:
+                plt.pause(.03)
 
     def handle(self, frequency_domain_data):
         self._frequencies = frequency_domain_data.bar_frequencies

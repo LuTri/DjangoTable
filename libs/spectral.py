@@ -148,7 +148,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
             _left_nearest = np.searchsorted(
                 self.sampled_frequencies,
                 self.bar_frequencies - (self.bar_width / 2)
-            ) - 1
+            )
             _right_nearest = np.searchsorted(
                 self.sampled_frequencies,
                 self.bar_frequencies + (self.bar_width / 2)
@@ -171,7 +171,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
             ]
         return self.__sample_distances
 
-    def write(self, writer):
+    def write(self, writer, method=None):
         #print(f'{self.sample_distances=}')
         #print(f'{self.cover_indices=}')
         #print(f'{self.bar_frequencies=}')
@@ -193,7 +193,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
         _bar_sections = []
 
         #total_energy = self._data[0]
-        total_energy = 20
+        total_energy = settings.TOTAL_FFT_ENERGY
 
         _ref_max = 0
 
@@ -207,14 +207,35 @@ class SpectralBarRepresenter(SpectralRepresenter):
             #     np.mean(_data[-1]),
             # ]
             #
-            #full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
-            #                               weights=self.sample_distances[bar])
-            rss = np.sqrt(np.sum(self._data[slice(*self.cover_indices[bar])] ** 2))
+            full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
+                                           weights=self.sample_distances[bar])
+
+            _handled = {
+                'rss': np.sqrt(np.sum(self._data[slice(*self.cover_indices[bar])] ** 2)),
+                'max': np.max(np.array(_data)),
+                'mean': np.mean(_data),
+                'abs_mean': np.mean(np.abs(_data)),
+                'median': np.median(_data),
+                'abs_median': np.median(np.abs(_data)),
+                'weighted_avg': full_weighted_avg,
+            }
+
+            rss = _handled[method or settings.RSS_CALCULATOR]
+
             # items = sorted([np.max(_data),
             #                 full_weighted_avg,
             #                 np.min(_data)])
-
             tell = False
+            if CURRENT_RANGE['min'] is None or rss < CURRENT_RANGE['min']:
+                CURRENT_RANGE['min'] = rss
+                tell = True
+            if CURRENT_RANGE['max'] is None or rss > CURRENT_RANGE['max']:
+                CURRENT_RANGE['max'] = rss
+                tell = True
+
+            if tell:
+                print(f'NEW RANGE: {CURRENT_RANGE}')
+
             #print(f'Items for {bar}: {items}')
             #val = np.max(np.array(items))
             val = (rss / total_energy) * 0xFFFF
@@ -232,15 +253,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
             #val = np.max(_data)
             #print(f'Val for {bar}: {val=}')
-            if CURRENT_RANGE['min'] is None or val < CURRENT_RANGE['min']:
-                CURRENT_RANGE['min'] = val
-                tell = True
-            if CURRENT_RANGE['max'] is None or val > CURRENT_RANGE['max']:
-                CURRENT_RANGE['max'] = val
-                tell = True
 
-            if tell:
-                print(f'NEW RANGE: {CURRENT_RANGE}')
 
             # if 0 < val / _max * 0xFFFF < 0xffff:
             #     _bar_sections.append(val / _max * 0xFFFF)
@@ -362,7 +375,7 @@ class SpectralAudioBar:
         # Convert to dBFS
         return frequencies, 20 * np.log10(s_magnitude / ref)
 
-    def process_data(self, sample_rate, fft_size=None):
+    def process_data(self, sample_rate, fft_size=None, window_fnc=None):
         timing = time.time()
         if fft_size is None:
             fft_size = len(self.frame_buffer)
@@ -370,12 +383,12 @@ class SpectralAudioBar:
         frequencies, Pxx_den = signal.welch(
             self.frame_buffer,
             sample_rate,
-            window='boxcar',
-            nperseg=settings.VBAN_SAMPLES_PROCESSED / 2,
-            noverlap=settings.VBAN_SAMPLES_PROCESSED / 4,
+            window=window_fnc or settings.VBAN_WELCH_WINDOW,
+            nperseg=settings.VBAN_WELCH_N_SEGMENT,
+            noverlap=settings.VBAN_WELCH_OVERLAP,
             nfft=settings.VBAN_SAMPLES_PROCESSED,
-            scaling='spectrum',
-            detrend='constant',
+            scaling=settings.VBAN_WELCH_SCALING,
+            detrend=settings.VBAN_WELCH_DETREND,
             return_onesided=True,
             average='mean'
         )
@@ -383,6 +396,10 @@ class SpectralAudioBar:
         Pxx_den[Pxx_den == 0.] = 1.
         Pxx_den = np.log10(Pxx_den)
         Pxx_den[~np.isfinite(Pxx_den)] = 0
+
+        #Pxx_den[Pxx_den == 0.] = 1.
+        #Pxx_den = np.log2(Pxx_den)
+        #Pxx_den[~np.isfinite(Pxx_den)] = 0
 
         representer = SpectralBarRepresenter(frequency_domain_data=Pxx_den,
                                              frequencies=frequencies)
@@ -398,7 +415,7 @@ class SpectralAudioBar:
             )
         return representer
 
-    def __call__(self, signal_object, data_channel=0, fft_size=None):
+    def __call__(self, signal_object, data_channel=0, fft_size=None, window_fnc=None):
         if self.byte_size(self.frame_buffer) > self.MAX_BYTE_BUFFER:
 
             self.frame_buffer = self.frame_buffer[self.byte_size(signal_object.data[:, data_channel]):]
@@ -409,4 +426,5 @@ class SpectralAudioBar:
         return self.process_data(
             signal_object.sample_rate,
             fft_size or signal_object.n_samples,
+            window_fnc,
         )
