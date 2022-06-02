@@ -84,36 +84,33 @@ def choose_window(window):
 
 
 class Pyplotter:
-    def __init__(self, ion=True, n_frames=None, frame_update_fnc=None, window_update_fnc=None, modulator_update_fnc=None, *args, **kwargs):
+    def __init__(self, ion=True, n_frames=None, frame_update_fnc=None, window_update_fnc=None, modulator_cb=None, *args, **kwargs):
+        self.ion = ion
         if ion:
             plt.ion()
-        self.ion = ion
+            self._fig, self.parent_ax = plt.subplots()
+        else:
+            self._fig = plt.figure()
+            gs0 = gridspec.GridSpec(2, 1, self._fig)
+            gs00 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs0[0])
+            gs01 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[1])
 
-        self._fig = plt.figure()
+            self.parent_ax = self._fig.add_subplot(gs00[-1, :-2])
+            self.dropdown_ax = self._fig.add_subplot(gs00[-1, -2])
+            self.modulator_ax = self._fig.add_subplot(gs00[-1, -1])
 
-        gs0 = gridspec.GridSpec(2, 1, self._fig)
-        gs00 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs0[0])
-        gs01 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[1])
+            self.frame_ax = self._fig.add_subplot(gs01[0])
 
-        self.parent_ax = self._fig.add_subplot(gs00[-1, :-2])
-        self.dropdown_ax = self._fig.add_subplot(gs00[-1, -2])
-        self.modulator_ax = self._fig.add_subplot(gs00[-1, -1])
+            plt.tight_layout()
 
-        self.frame_ax = self._fig.add_subplot(gs01[0])
-
-        plt.tight_layout()
-
-        #self.widget_ax = plt.axes([0.25, 0.1, 0.65, 0.03],
-#                                  facecolor='lightgoldenrodyellow')
-        self.widgets = {
-            'window': widgets.RadioButtons(self.dropdown_ax, labels=AVAILABLE_WINDOWS, active=0),
-            'frame': widgets.Slider(self.frame_ax, 'Frame nr:', valmin=0, valmax=n_frames - 1, valstep=1),
-            'modulator': widgets.RadioButtons(self.modulator_ax, labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'weighted_avg'], active=2)
-
-        }
-        self.widgets['frame'].on_changed(frame_update_fnc)
-        self.widgets['window'].on_clicked(window_update_fnc)
-        self.widgets['modulator'].on_clicked(modulator_update_fnc)
+            self.widgets = {
+                'window': widgets.RadioButtons(self.dropdown_ax, labels=AVAILABLE_WINDOWS, active=0),
+                'frame': widgets.Slider(self.frame_ax, 'Frame nr:', valmin=0, valmax=n_frames - 1, valstep=1),
+                'modulator': widgets.RadioButtons(self.modulator_ax, labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'weighted_avg'], active=2)
+            }
+            self.widgets['frame'].on_changed(frame_update_fnc)
+            self.widgets['window'].on_clicked(window_update_fnc)
+            self.widgets['modulator'].on_clicked(self.get_modulator_updater())
 
         self.data = []
         self._orig_max = None
@@ -121,6 +118,15 @@ class Pyplotter:
         self._frequencies = None
         self._min = None
         self._max = None
+
+        self._modulator_cb = modulator_cb
+        self._modulator = 'mean'
+
+    def get_modulator_updater(self):
+        def updater(modulator):
+            self._modulator = modulator
+            self._modulator_cb()
+        return updater
 
     def do_plot(self, frequency_domain_data, originals):
         with warnings.catch_warnings():
@@ -173,7 +179,7 @@ class Pyplotter:
 
     def handle(self, frequency_domain_data):
         self._frequencies = frequency_domain_data.bar_frequencies
-        frequency_domain_data.write(self)
+        frequency_domain_data.write(self, self._modulator)
 
         originals = np.array(frequency_domain_data._data)
         _max = np.max(originals)
