@@ -1,4 +1,6 @@
 import warnings
+import struct
+
 
 class ConversionError(Exception):
     pass
@@ -56,16 +58,16 @@ class DualbyteC(Converter):
             raise ConversionError(f'{val_16bit} can not be represented as 2 bytes!')
         return result
 
-    def _reverse(self, *bytes):
+    def _reverse(self, *v_bytes):
         _next = 0
         result = 0
-        for byte in reversed(bytes):
+        for byte in reversed(v_bytes):
             result |= (byte << _next)
             _next += 8
         return result
 
-    def reverse(self, *bytes):
-        return self._reverse(*bytes)
+    def reverse(self, *v_bytes):
+        return self._reverse(*v_bytes)
 
 
 class TriplebyteConverter(DualbyteC):
@@ -85,9 +87,22 @@ class PerConst2Byte(DualbyteC):
         val_16bit = int((self.MAX_UNSIGNED / self.DIVIDER) * real)
         return super()._forward(val_16bit)
 
-    def reverse(self, *bytes):
-        _16bit = super()._reverse(*bytes)
+    def reverse(self, *v_bytes):
+        _16bit = super()._reverse(*v_bytes)
         return _16bit / float(self.MAX_UNSIGNED) * self.DIVIDER
+
+
+class FullFloat(Converter):
+    def _forward(self, value):
+        f_bytes = [int(c) for c in struct.pack('f', value)]
+        _reversed = self.reverse(f_bytes)
+        if _reversed != value:
+            warnings.warn(f'Precision lost in conversion! input: {value}, '
+                          f'converted: {_reversed}')
+        return f_bytes
+
+    def reverse(self, v_bytes):
+        return struct.unpack('f', bytes(v_bytes))[0]
 
 
 class Real360in2Byte(PerConst2Byte):
@@ -102,6 +117,7 @@ class Real2Byte(PerConst2Byte):
     DIVIDER = 1.0
 
 
+full_float = FullFloat()
 dualbyte = DualbyteC()
 triplebyte = TriplebyteConverter()
 per_one_1byte = Real1Byte()

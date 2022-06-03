@@ -789,3 +789,7 @@ class SoundToLight(UartCom):
 
     def handle(self, frequency_domain_data):
         frequency_domain_data.write(self)
+
+
+class UartSetState(SimpleUartCmd):
+    CMD = 'CMD_SET_STATE'
