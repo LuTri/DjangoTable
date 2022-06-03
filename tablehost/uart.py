@@ -627,7 +627,7 @@ class UartCom(object):
 
         if not any(exp in reply for exp in self.expected_answers):
             raise UartReadTimeout(f'{self._config.get("PORT")} read Timeout. Received: {reply}')
-        return self.parse_reply(reply)
+        return self.parse_reply(reply), reply
 
     def parse_reply(self, reply):
         messages = []
@@ -791,5 +791,16 @@ class SoundToLight(UartCom):
         frequency_domain_data.write(self)
 
 
-class UartSetState(SimpleUartCmd):
+class UartSetState(UartCom):
     CMD = 'CMD_SET_STATE'
+
+    @property
+    def expected_answers(self):
+        return [self.DEFINES.get('MSG_STATE_DATA_STOP').encode(),]
+
+class UartGetState(UartCom):
+    CMD = 'CMD_GET_STATE'
+
+    @property
+    def expected_answers(self):
+        return [self.DEFINES.get('MSG_STATE_DATA_STOP').encode(),]
