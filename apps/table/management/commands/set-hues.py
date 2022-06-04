@@ -4,7 +4,7 @@ from tablehost.uart import UartSetState
 
 
 class Command(BaseCommand):
-    help = "SOUND TO LIGHT TEST (via slaving)."
+    help = "Set sound-to-light colors."
 
     def add_arguments(self, parser):
         parser.add_argument('hues', metavar='HUES', type=float, nargs='*')
