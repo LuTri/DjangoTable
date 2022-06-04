@@ -24,9 +24,6 @@ class PCMData:
     def mean_channels(self):
         return np.mean(np.swapaxes(self.data, 1, 0), 0)
 
-    def mean_channels(self):
-        return np.mean(np.swapaxes(self.data, 1, 0), 0)
-
 
 def signed_24(bytes):
     prefix = 0xFF if bytes[0] >= 128 else 0x00
@@ -178,7 +175,8 @@ class VBANReceiver(threading.Thread):
                 int(len(self.sample_buffer) / self.stream_chanNum),
                 self.stream_frameCounter,
             ))
-            self.sample_buffer = self.sample_buffer[self.stream_sampNum * self.stream_chanNum:]
+            #self.sample_buffer = self.sample_buffer[max([int(self.required_samples * self.stream_chanNum / 2), self.stream_sampNum * 2]):]
+            self.sample_buffer = None
 
         self.rec_couner += 1
         if self.rec_couner % 6000 == 0:

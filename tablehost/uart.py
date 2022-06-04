@@ -787,8 +787,21 @@ class LedWriter(UartCom):
 class SoundToLight(UartCom):
     CMD = 'CMD_SOUNDTOLIGHT'
 
-    def handle(self, frequency_domain_data):
-        frequency_domain_data.write(self)
+    def __init__(self, *args, os_new_min=None, os_new_max=None,
+                 os_old_min=None, os_old_max=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.os_old_min = os_old_min
+        self.os_old_max = os_old_max
+        self.os_new_min = os_new_min
+        self.os_new_max = os_new_max
+
+    def handle(self, frequency_domain_data, *args):
+        frequency_domain_data.write(self,
+                                    o_scale_new_min=self.os_new_min,
+                                    o_scale_new_max=self.os_new_max,
+                                    o_scale_old_min=self.os_old_min,
+                                    o_scale_old_max=self.os_old_max)
 
 
 class UartSetState(UartCom):
