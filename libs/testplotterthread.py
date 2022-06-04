@@ -16,7 +16,8 @@ import matplotlib.gridspec as gridspec
 
 
 mpl.rcParams['savefig.pad_inches'] = 0
-
+mpl.rcParams['figure.figsize'] = (16, 8)
+mpl.rcParams['figure.autolayout'] = True
 
 SEC_COLORS = list(reversed([
     .0,
@@ -46,7 +47,6 @@ AVAILABLE_WINDOWS = [
     'exponential',
     'tukey',
     'taylor',
-
 ]
 
 def get_section_color(value):
@@ -84,33 +84,111 @@ def choose_window(window):
 
 
 class Pyplotter:
-    def __init__(self, ion=True, n_frames=None, frame_update_fnc=None, window_update_fnc=None, modulator_cb=None, *args, **kwargs):
-        self.ion = ion
-        if ion:
+    def __init__(self, live=True, n_frames=None, min_freq=None, max_freq=None,
+                 frame_update_fnc=None, window_update_fnc=None,
+                 modulator_cb=None, samples_update_fnc=None,
+                 min_range_updater=None, max_range_updater=None,
+                 fft_impl_updater=None, os_new_min=None, os_new_max=None,
+                 os_old_min=None, os_old_max=None, *args, **kwargs):
+
+        self.o_scale_new_min = os_new_min
+        self.o_scale_new_max = os_new_max
+        self.o_scale_old_min = os_old_min
+        self.o_scale_old_max = os_old_max
+        self.live = live
+        if live:
             plt.ion()
-            self._fig, self.parent_ax = plt.subplots()
-        else:
-            self._fig = plt.figure()
-            gs0 = gridspec.GridSpec(2, 1, self._fig)
-            gs00 = gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs0[0])
-            gs01 = gridspec.GridSpecFromSubplotSpec(1, 1, subplot_spec=gs0[1])
+        self._fig = plt.figure()
 
-            self.parent_ax = self._fig.add_subplot(gs00[-1, :-2])
-            self.dropdown_ax = self._fig.add_subplot(gs00[-1, -2])
-            self.modulator_ax = self._fig.add_subplot(gs00[-1, -1])
+        global_gs = gridspec.GridSpec(10, 1, self._fig)
 
-            self.frame_ax = self._fig.add_subplot(gs01[0])
+        self.raw_ax = self._fig.add_subplot(global_gs[:3, -1])
 
-            plt.tight_layout()
+        body_gs = gridspec.GridSpecFromSubplotSpec(1, 8, subplot_spec=global_gs[3:-1, -1])
 
-            self.widgets = {
-                'window': widgets.RadioButtons(self.dropdown_ax, labels=AVAILABLE_WINDOWS, active=0),
-                'frame': widgets.Slider(self.frame_ax, 'Frame nr:', valmin=0, valmax=n_frames - 1, valstep=1),
-                'modulator': widgets.RadioButtons(self.modulator_ax, labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'weighted_avg'], active=2)
-            }
-            self.widgets['frame'].on_changed(frame_update_fnc)
-            self.widgets['window'].on_clicked(window_update_fnc)
-            self.widgets['modulator'].on_clicked(self.get_modulator_updater())
+        wind_scaler_gs = gridspec.GridSpecFromSubplotSpec(15, 1, subplot_spec=body_gs[-1, -2])
+
+        footer_gs = gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=global_gs[-1, -1])
+
+        mod_samples_fft_gs = gridspec.GridSpecFromSubplotSpec(8, 1, subplot_spec=body_gs[-1, -1])
+
+        self.parent_ax = self._fig.add_subplot(body_gs[-1, :-2])
+        self.window_fnc_ax = self._fig.add_subplot(wind_scaler_gs[:-4, -1])
+
+        self.new_max_ax = self._fig.add_subplot(wind_scaler_gs[-4, -1])
+        self.new_min_ax = self._fig.add_subplot(wind_scaler_gs[-3, -1])
+        self.old_max_ax = self._fig.add_subplot(wind_scaler_gs[-2, -1])
+        self.old_min_ax = self._fig.add_subplot(wind_scaler_gs[-1, -1])
+
+        self.modulator_ax = self._fig.add_subplot(mod_samples_fft_gs[:-4, -1])
+        self.fft_ax = self._fig.add_subplot(mod_samples_fft_gs[-4:-1, -1])
+        self.samples_ax = self._fig.add_subplot(mod_samples_fft_gs[-1, -1])
+
+        footer_idx = 0
+
+        if not live:
+            frame_gs = gridspec.GridSpecFromSubplotSpec(1, 10, subplot_spec=footer_gs[footer_idx, -1])
+            footer_idx += 1
+            self.frame_ax = self._fig.add_subplot(frame_gs[-1, 1:])
+            self.frame_tb_ax = self._fig.add_subplot(frame_gs[-1, 0])
+
+        max_f_gs = gridspec.GridSpecFromSubplotSpec(1, 10, subplot_spec=footer_gs[footer_idx, -1])
+        footer_idx += 1
+        self.max_freq_ax = self._fig.add_subplot(max_f_gs[-1, 1:])
+        self.max_freq_tb_ax = self._fig.add_subplot(max_f_gs[-1, 0])
+
+        min_f_gs = gridspec.GridSpecFromSubplotSpec(1, 10, subplot_spec=footer_gs[footer_idx, -1])
+        footer_idx += 1
+        self.min_freq_ax = self._fig.add_subplot(min_f_gs[-1, 1:])
+        self.min_freq_tb_ax = self._fig.add_subplot(min_f_gs[-1, 0])
+
+        self._fig.tight_layout()
+
+        self.widgets = {
+            'window': widgets.RadioButtons(self.window_fnc_ax, labels=AVAILABLE_WINDOWS, active=4),
+            'max_freq': widgets.Slider(self.max_freq_ax, '', valmin=0, valmax=22000, valstep=5,
+                                       valinit=max_freq),
+            'max_freq_tb': widgets.TextBox(self.max_freq_tb_ax, 'Max Freq:', initial=f'{max_freq}'),
+
+            'min_freq': widgets.Slider(self.min_freq_ax, '', valmin=0, valmax=22000, valstep=5,
+                                       valinit=min_freq),
+            'min_freq_tb': widgets.TextBox(self.min_freq_tb_ax, 'Min Freq:', initial=f'{min_freq}'),
+            'new_max_tb': widgets.TextBox(self.new_max_ax, 'n Max:', initial=f'{self.o_scale_new_max}'),
+            'new_min_tb': widgets.TextBox(self.new_min_ax, 'n Min:', initial=f'{self.o_scale_new_min}'),
+            'old_max_tb': widgets.TextBox(self.old_max_ax, 'o Max:', initial=f'{self.o_scale_old_max}'),
+            'old_min_tb': widgets.TextBox(self.old_min_ax, 'o Min:', initial=f'{self.o_scale_old_min}'),
+            'modulator': widgets.RadioButtons(
+                self.modulator_ax,
+                labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'heavy_varianz', 'ultra_heavy_varianz', 'light_varianz', 'mean_rss'],
+                active=6),
+            'fft_impl': widgets.RadioButtons(self.fft_ax, labels=['scipy.periodigram', 'kramer', 'scipy.welch', 'foo.fft'], active=0),
+            'n_samples': widgets.TextBox(self.samples_ax, label='Processed samples:',
+                                         initial=f'{settings.VBAN_SAMPLES_PROCESSED}'),
+        }
+
+        if not live:
+            self.widgets['frame'] = widgets.Slider(self.frame_ax, '', valmin=0, valmax=n_frames - 1, valstep=1)
+            self.widgets['frame_tb'] = widgets.TextBox(self.frame_tb_ax, 'Frame:', initial=f'{0}')
+            self.widgets['frame'].on_changed(self.get_related_updater('frame_tb', frame_update_fnc))
+            self.widgets['frame_tb'].on_submit(self.get_related_updater('frame', frame_update_fnc))
+
+        self.widgets['new_min_tb'].on_submit(self.get_scaler_updater(False, True))
+        self.widgets['new_max_tb'].on_submit(self.get_scaler_updater(False, False))
+        self.widgets['old_min_tb'].on_submit(self.get_scaler_updater(True, True))
+        self.widgets['old_max_tb'].on_submit(self.get_scaler_updater(True, False))
+
+        self.widgets['window'].on_clicked(window_update_fnc)
+        self.widgets['fft_impl'].on_clicked(fft_impl_updater)
+        self.widgets['modulator'].on_clicked(self.get_modulator_updater())
+        self.widgets['n_samples'].on_submit(self.get_n_samples_updater(samples_update_fnc))
+
+        self.widgets['max_freq'].on_changed(self.get_related_updater('max_freq_tb', max_range_updater))
+        self.widgets['max_freq'].slidermin = self.widgets['min_freq']
+        self.widgets['max_freq_tb'].on_submit(self.get_related_updater('max_freq', max_range_updater))
+
+        self.widgets['min_freq'].on_changed(self.get_related_updater('min_freq_tb', min_range_updater))
+        self.widgets['min_freq'].slidermax = self.widgets['max_freq']
+        self.widgets['min_freq_tb'].on_submit(self.get_related_updater('min_freq', min_range_updater))
 
         self.data = []
         self._orig_max = None
@@ -120,7 +198,53 @@ class Pyplotter:
         self._max = None
 
         self._modulator_cb = modulator_cb
-        self._modulator = 'mean'
+        self._modulator = settings.RSS_CALCULATOR
+
+    def get_scaler_updater(self, old=False, for_min=False):
+        def updater(value):
+            try:
+                int_val = int(value)
+                if old and for_min:
+                    self.o_scale_old_min = int_val
+                elif old:
+                    self.o_scale_old_max = int_val
+                elif for_min:
+                    self.o_scale_new_min = int_val
+                else:
+                    self.o_scale_new_max = int_val
+            except ValueError:
+                print(f'Illegal value "{value}"')
+        return updater
+
+    def get_related_updater(self, widget_name, par_fnc):
+        def updater(value):
+            try:
+                int_val = int(value)
+                _widget = self.widgets[widget_name]
+
+                _widget.set_val(int_val)
+
+                if getattr(par_fnc, '_HANDLED', None) != int_val:
+                    setattr(par_fnc, '_HANDLED', int_val)
+                    par_fnc(int_val)
+            except ValueError:
+                print(f'Illegal value "{value}"')
+        return updater
+
+    def get_n_samples_updater(self, par_fnc):
+        def updater(value):
+            try:
+                int_val = int(value)
+                new_max = par_fnc(int_val)
+                if not self.live:
+                    slider_widget = self.widgets['frame']
+                    slider_widget.set_val(0)
+                    slider_widget.valmax = new_max - 1
+                    slider_widget.ax.set_xlim(slider_widget.valmin, slider_widget.valmax)
+            except ValueError as exc:
+                print(exc)
+                print(f'Illegal value "{value}"')
+        return updater
 
     def get_modulator_updater(self):
         def updater(modulator):
@@ -128,37 +252,77 @@ class Pyplotter:
             self._modulator_cb()
         return updater
 
-    def do_plot(self, frequency_domain_data, originals):
+    def do_plot(self, frequency_domain_data, originals, raw_data):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            self._min = min([np.min(self.data), np.min(originals)] + ([self._min] if self._min is not None else []))
-            self._max = max([np.max(self.data), np.max(originals)] + ([self._max] if self._max is not None else []))
-            self.parent_ax.cla()
+            #self._min = min([np.min(self.data), np.min(originals)] + ([self._min] if self._min is not None and self.live else []))
+            #self._max = max([np.max(self.data), np.max(originals)] + ([self._max] if self._max is not None and self.live else []))
 
-            _points = np.stack([np.array(self._frequencies).flatten(), np.array(self.data).flatten()])
+            #t_plot[~np.isfinite(t_plot)] = -100
+            #t_orig[~np.isfinite(t_orig)] = -100
+
+            #_min = min([np.min(t_plot), np.min(t_orig), -1])
+            #_max = max([np.max(t_plot), np.max(t_orig), 1])
+
+            self._min = -10
+            self._max = 0xFFFF + 10
+
+            t_plot = np.copy(self.data)
+            t_orig = np.copy(originals)
+            #if np.mean(t_plot) < 0:
+            #    t_plot = t_plot + 75
+            #    t_orig = t_orig + 75
+
+            _min_r = np.min(self._frequencies) - 20
+            _max_r = np.max(self._frequencies) + (frequency_domain_data.bar_width) / 2 + 20
+
+            #while self._min > _min:
+            #    self._min -= 200
+            #while self._max < _max:
+            #    self._max += 200
+
+            self.parent_ax.cla()
+            self.raw_ax.cla()
+
+            dt = 1/frequency_domain_data.sample_rate
+            dt_x = np.linspace(-dt * len(raw_data), 0, num=len(raw_data))
+            self.raw_ax.plot(dt_x, raw_data)
+
+            self.raw_ax.hlines([0], np.min(dt_x), np.max(dt_x), color='red')
+            self.raw_ax.vlines(dt_x[::256], -32768, 32768, color='red')
+
+            self.raw_ax.set_ylim((-32768, 32768))
+
+            _points = np.stack([np.array(self._frequencies).flatten(), np.array(t_plot).flatten()])
             segments = np.swapaxes(_points, 1, 0)
-            lc = CircleCollection([90], offsets=segments, transOffset=self.parent_ax.transData, facecolors=[get_section_color(v) for v in self.data])
-            self.parent_ax.plot(frequency_domain_data.sampled_frequencies, originals * (np.max(self.data) / np.max(originals)), color='red')
+            lc = CircleCollection([90], offsets=segments, transOffset=self.parent_ax.transData, facecolors=[get_section_color(v) for v in t_plot])
+            self.parent_ax.plot(frequency_domain_data.sampled_frequencies, t_orig, color='red')
             self.parent_ax.add_collection(lc)
-            self.parent_ax.plot(self._frequencies, self.data)
+            self.parent_ax.plot(self._frequencies, t_plot)
 
             self.parent_ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
-            self.parent_ax.vlines(self._frequencies, 0, 0xFFFF)
+            self.parent_ax.vlines(frequency_domain_data.sampled_frequencies, self._min, self._max, color='#00000011')
 
-            self.parent_ax.set_ylim((0, self._max))
+            self.parent_ax.vlines([np.max(self._frequencies) + frequency_domain_data.bar_width / 2] + [x - (frequency_domain_data.bar_width / 2) for x in self._frequencies], self._min, self._max, color='#ff000033')
 
-            self.parent_ax.set_xlim(settings.PRESENTER_FREQUENCY_RANGE)
+            self.parent_ax.vlines(self._frequencies, self._min, self._max)
+
+            self.parent_ax.set_ylim((self._min, self._max))
+            self.parent_ax.set_xlim((_min_r, _max_r))
+            self.parent_ax.grid()
             plt.show()
-            if self.ion:
-                plt.pause(.03)
+            if self.live:
+                plt.pause(dt * 256)
 
-    def handle(self, frequency_domain_data):
+    def handle(self, frequency_domain_data, raw_data):
         self._frequencies = frequency_domain_data.bar_frequencies
-        frequency_domain_data.write(self, self._modulator)
+        frequency_domain_data.write(self, self._modulator,
+                                    self.o_scale_new_min, self.o_scale_new_max,
+                                    self.o_scale_old_min, self.o_scale_old_max)
 
-        originals = np.array(frequency_domain_data._data)
+        originals = np.array(frequency_domain_data.data)
         _max = np.max(originals)
         _min = np.min(originals)
 
@@ -170,7 +334,7 @@ class Pyplotter:
             self._orig_min = _min
             print(f'New orig min: {_min}')
 
-        self.do_plot(frequency_domain_data, originals)
+        self.do_plot(frequency_domain_data, originals, raw_data)
 
     def command(self, *args, **kwargs):
         self.data = [kwargs[key] for key in sorted([key for key in kwargs.keys() if key.startswith('val_')], key=lambda k: int(k[4:]))]
