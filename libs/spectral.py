@@ -172,41 +172,17 @@ class SpectralBarRepresenter(SpectralRepresenter):
         return self.__sample_distances
 
     def write(self, writer, method=None):
-        #print(f'{self.sample_distances=}')
-        #print(f'{self.cover_indices=}')
-        #print(f'{self.bar_frequencies=}')
-        #print(f'{self.bar_width=}')
-
-        #ref_data = [self._data, self._data]
-        #ref_data = np.array(ref_data)
-
-        #ref_data = raise_90(ref_data)
-        #ref_data = LOG2MOD(ref_data)
-
-        #ref_data = ref_data / 100
-
-        #print(f'{ref_data=}')
-
         _min = 0
         _max = 130
 
         _bar_sections = []
 
-        #total_energy = self._data[0]
         total_energy = settings.TOTAL_FFT_ENERGY
 
         _ref_max = 0
 
         for bar in range(self.n_bars):
             _data = self._data[slice(*self.cover_indices[bar])]
-            #print(f'Data for {bar}: {_data}')
-            #
-            # _avg_data = [
-            #     np.mean(_data[0]),
-            #     np.mean(_data[1:-1].flatten()),
-            #     np.mean(_data[-1]),
-            # ]
-            #
             full_weighted_avg = np.average(self._data[slice(*self.cover_indices[bar])],
                                            weights=self.sample_distances[bar])
 
@@ -222,9 +198,6 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
             rss = _handled[method or settings.RSS_CALCULATOR]
 
-            # items = sorted([np.max(_data),
-            #                 full_weighted_avg,
-            #                 np.min(_data)])
             tell = False
             if CURRENT_RANGE['min'] is None or rss < CURRENT_RANGE['min']:
                 CURRENT_RANGE['min'] = rss
@@ -249,45 +222,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
             val = scaled
 
-            #val = val * scaler - val_limits[0]
-
-            #val = np.max(_data)
-            #print(f'Val for {bar}: {val=}')
-
-
-            # if 0 < val / _max * 0xFFFF < 0xffff:
-            #     _bar_sections.append(val / _max * 0xFFFF)
-            # elif val / _max * 0xFFFF > 0xffff:
-            #     _bar_sections.append(0xffff)
-            # else:
-            #     _bar_sections.append(0)
-
-            # if 0 < 0xFFFF + (val * 0xFFFF) < 0xffff:
-            #     _bar_sections.append(0xFFFF + (val * 0xFFFF))
-            # elif 0xFFFF + (val * 0xFFFF) > 0xffff:
-            #     _bar_sections.append(0xffff)
-            # else:
-            #     _bar_sections.append(0)
-
             _bar_sections.append(val)
-            #print(f'int16 val for {bar}: {_bar_sections[-1]}')
-
-            #refs = np.linspace(_min, _max, 8, endpoint=True, retstep=False)
-            #for y in range(8):
-            #    h = 1/14 * y
-
-            #    if any([c >= refs[y] for c in items]):
-            #        m = np.average(np.array(items))
-            #        r, g, b = colorsys.hsv_to_rgb(h, 1, (m / _max) * .5)
-            #        preset[coord_to_snakish(bar, 7 - y)] = (int(g*0xff) & 0xff,
-            #                                                int(r*0xff) & 0xff,
-            #                                                int(b*0xff) & 0xff)
-
-        #raw = []
-        #for key in sorted(preset.keys()):
-        #    for item in preset[key]:
-        #        raw.append(item)
-        #print(f'N_vals: {len(_bar_sections)}')
 
         _bar_sections = np.array(_bar_sections)
         _bar_sections[~np.isfinite(_bar_sections)] = 0
@@ -296,10 +231,7 @@ class SpectralBarRepresenter(SpectralRepresenter):
 
         cmd_kwargs = {f'val_{x}': int(max([min([value, 0xFFFF]), 0])) for x, value in enumerate(_bar_sections)}
 
-        writer.command(max_intensity=settings.STL_MAX_INTENSITY,
-                       dim_steps=settings.STL_DIM_STEPS,
-                       dim_delay=settings.STL_DIM_DELAY,
-                       **cmd_kwargs)
+        writer.command(**cmd_kwargs)
 
 
 class SpectralAudioBar:

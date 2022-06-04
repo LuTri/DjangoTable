@@ -142,36 +142,13 @@ class Pyplotter:
             self.parent_ax.plot(frequency_domain_data.sampled_frequencies, originals * (np.max(self.data) / np.max(originals)), color='red')
             self.parent_ax.add_collection(lc)
             self.parent_ax.plot(self._frequencies, self.data)
-            #self._ax.plot(self._frequencies, self.data, 'o', fillstyle='full', color=)
-            #
-            # _ref = np.max(np.array(self.data))
-            #
-            # for offset, col in [(0, '#ff5555'), (1000, '#55ff55'), (10000, '#5555ff'), (30000, '#ff00ff'), (50000, '#00ffff')]:
-            #     abs_val_range = 0xffff + offset
-            #     scaler = abs_val_range / 0xffff
-            #
-            #     scaled = np.array(self.data) * scaler - offset
-            #
-            #     scaled_max_diff = np.abs(np.max(scaled) - _ref)
-            #
-            #     plt.plot(self._frequencies, scaled + scaled_max_diff, color=col, label=f'offset: {offset}')
 
             self.parent_ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
             self.parent_ax.vlines(self._frequencies, 0, 0xFFFF)
-            #plt.vlines(frequency_domain_data.sampled_frequencies, 0xffff, 0xffff + 20000, colors=['red'])
-            #plt.vlines(self._frequencies + (frequency_domain_data.bar_width / 2), 0, 0xffff + 20000, colors=['#00FF0088'])
-
-            #for idx, vline_value in enumerate(self._frequencies):
-            #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0),
-            #               rotation=300)
-
-            #for idx, vline_value in enumerate(frequency_domain_data.sampled_frequencies):
-            #    plt.annotate(text=f'{idx}: {vline_value:.1f}', xy=(vline_value - 40, 0xffff - 200),
-            #                rotation=300)
 
             self.parent_ax.set_ylim((0, self._max))
-            #plt.legend()
+
             self.parent_ax.set_xlim(settings.PRESENTER_FREQUENCY_RANGE)
             plt.show()
             if self.ion:
