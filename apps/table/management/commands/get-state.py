@@ -5,25 +5,31 @@ from tablehost.uart import PatchedSerial
 from tablehost.uart import UartGetState
 
 from libs.mcconversion import full_float
+from libs.mcconversion import per_one_2byte
+from libs.mcconversion import dualbyte
 
 
 class Command(BaseCommand):
-    help = "SOUND TO LIGHT TEST (via slaving)."
+    help = "Get current MC configuration."
 
-    def add_arguments(self, parser):
-        parser.add_argument('hues', metavar='HUES', type=float, nargs='*')
-
-    def handle(self, *args, hues=(), **options):
+    def handle(self, *args, **options):
         setter = UartGetState(serial_class=PatchedSerial)
-        reply, current_hues = setter.command(*hues)
+        reply, current_hues = setter.command()
 
         garbage, _bytes = current_hues.split(b'SD')
         _bytes = _bytes.rstrip(b'DS')
         hues = []
 
+        intensity = per_one_2byte.reverse(_bytes[0:2])
+        fnc_count = dualbyte.reverse(_bytes[2:4])
+        dim_delay = dualbyte.reverse(_bytes[4:6])
+
+        self.stdout.write(f'{intensity=}; {fnc_count=}; {dim_delay=}',
+                          ending=os.linesep)
+
         self.stdout.write('Current hues:', ending=os.linesep)
         for idx in range(8):
-            _b = _bytes[idx * 4:(idx + 1) * 4]
+            _b = _bytes[6 + idx * 4:6 + (idx + 1) * 4]
             hues.append(full_float.reverse(_b))
 
         self.stdout.write(f'{hues}', ending=os.linesep)

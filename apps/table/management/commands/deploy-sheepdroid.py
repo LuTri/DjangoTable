@@ -22,8 +22,6 @@ def lazy_concat(a, b):
 class Command(BaseCommand):
     help = "Push a copy of the current local source code to GIT_REMOTE_NAME."
 
-    _opts = []
-
     def add_arguments(self, parser):
         parser.add_argument(
             '-r', '--remote',
@@ -39,6 +37,11 @@ class Command(BaseCommand):
             '-u', '--update-remote',
             action='store_false',
             default=True
+        )
+
+        parser.add_argument(
+            '-c', '--commit-message',
+            default='INDEV auto deploy'
         )
 
     def _run_shell_command(self, opts):
@@ -70,17 +73,9 @@ class Command(BaseCommand):
         self.retries = None
         self.remote = None
         self.__tmp_branch = None
+        self.commit_message = None
 
         self._local_repo = Repo(os.curdir)
-
-        self._opts = [
-            ('current_commit', ['git', 'rev-parse', 'HEAD']),
-            (None, ['git', 'add', '.']),
-            (None, ['git', 'commit', '-m', '"Pushed from sheepfold"']),
-            (None, ['git', 'push', '-f', lazy_attr(self, 'remote'),
-                    lazy_concat('HEAD:', lazy_attr(self, 'tmp_branch'))]),
-            (None, ['git', 'reset', lazy_attr(self, 'current_commit')]),
-        ]
 
     def _handle_repo(self, repo):
         if self.verbose:
@@ -99,7 +94,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'pushing {repo}.', ending=os.linesep)
 
             repo.git.add(repo.git.working_dir)
-            repo.git.commit('-m', 'INDEV auto deploy')
+            repo.git.commit('-m', self.commit_message)
 
             if self.verbose:
                 self.stdout.write(f'{repo}: -> {self.tmp_branch}',
@@ -115,7 +110,8 @@ class Command(BaseCommand):
         return self.__tmp_branch
 
     def handle(self, *args, verbosity=None, retries=None, remote=None,
-               extra_ssh_cmd=None, **options):
+               extra_ssh_cmd=None, commit_message=None, **options):
+        self.commit_message = commit_message
         self.verbose = verbosity is not None and verbosity > 1
         self.retries = retries
         self.remote = remote

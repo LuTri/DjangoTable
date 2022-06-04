@@ -798,6 +798,7 @@ class UartSetState(UartCom):
     def expected_answers(self):
         return [self.DEFINES.get('MSG_STATE_DATA_STOP').encode(),]
 
+
 class UartGetState(UartCom):
     CMD = 'CMD_GET_STATE'
 
