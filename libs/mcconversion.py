@@ -54,11 +54,11 @@ class DualbyteC(Converter):
 
     def _forward(self, val_16bit):
         result = (val_16bit >> 8) & 0xff, val_16bit & 0xff
-        if (val_16bit ^ self._reverse(*result)) > 0:
+        if (val_16bit ^ self._reverse(result)) > 0:
             raise ConversionError(f'{val_16bit} can not be represented as 2 bytes!')
         return result
 
-    def _reverse(self, *v_bytes):
+    def _reverse(self, v_bytes):
         _next = 0
         result = 0
         for byte in reversed(v_bytes):
@@ -66,8 +66,8 @@ class DualbyteC(Converter):
             _next += 8
         return result
 
-    def reverse(self, *v_bytes):
-        return self._reverse(*v_bytes)
+    def reverse(self, v_bytes):
+        return self._reverse(v_bytes)
 
 
 class TriplebyteConverter(DualbyteC):
@@ -75,7 +75,7 @@ class TriplebyteConverter(DualbyteC):
 
     def _forward(self, val_24bit):
         result = (val_24bit >> 16) & 0xff, (val_24bit >> 8) & 0xff, val_24bit & 0xff
-        if (val_24bit ^ self._reverse(*result)) > 0:
+        if (val_24bit ^ self._reverse(result)) > 0:
             raise ConversionError(f'{val_24bit} can not be represented as 2 bytes!')
         return result
 
@@ -87,8 +87,8 @@ class PerConst2Byte(DualbyteC):
         val_16bit = int((self.MAX_UNSIGNED / self.DIVIDER) * real)
         return super()._forward(val_16bit)
 
-    def reverse(self, *v_bytes):
-        _16bit = super()._reverse(*v_bytes)
+    def reverse(self, v_bytes):
+        _16bit = super()._reverse(v_bytes)
         return _16bit / float(self.MAX_UNSIGNED) * self.DIVIDER
 
 
