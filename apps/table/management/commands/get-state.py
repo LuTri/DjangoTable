@@ -20,16 +20,19 @@ class Command(BaseCommand):
         _bytes = _bytes.rstrip(b'DS')
         hues = []
 
-        intensity = per_one_2byte.reverse(_bytes[0:2])
-        fnc_count = dualbyte.reverse(_bytes[2:4])
-        dim_delay = dualbyte.reverse(_bytes[4:6])
+        loaded_state = int(_bytes[0])
 
+        intensity = per_one_2byte.reverse(_bytes[1:3])
+        fnc_count = dualbyte.reverse(_bytes[3:5])
+        dim_delay = dualbyte.reverse(_bytes[5:7])
+
+        self.stdout.write(f'load state: {loaded_state}', ending=os.linesep)
         self.stdout.write(f'{intensity=}; {fnc_count=}; {dim_delay=}',
                           ending=os.linesep)
 
         self.stdout.write('Current hues:', ending=os.linesep)
         for idx in range(8):
-            _b = _bytes[6 + idx * 4:6 + (idx + 1) * 4]
+            _b = _bytes[7 + idx * 4:7 + (idx + 1) * 4]
             hues.append(full_float.reverse(_b))
 
         self.stdout.write(f'{hues}', ending=os.linesep)
