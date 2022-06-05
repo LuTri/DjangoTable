@@ -14,6 +14,7 @@ from matplotlib.collections import CircleCollection
 from matplotlib import widgets
 import matplotlib.gridspec as gridspec
 
+from libs.spectral import DATA_COMBINER
 
 mpl.rcParams['savefig.pad_inches'] = 0
 mpl.rcParams['figure.figsize'] = (16, 8)
@@ -157,10 +158,7 @@ class Pyplotter:
             'new_min_tb': widgets.TextBox(self.new_min_ax, 'n Min:', initial=f'{self.o_scale_new_min}'),
             'old_max_tb': widgets.TextBox(self.old_max_ax, 'o Max:', initial=f'{self.o_scale_old_max}'),
             'old_min_tb': widgets.TextBox(self.old_min_ax, 'o Min:', initial=f'{self.o_scale_old_min}'),
-            'modulator': widgets.RadioButtons(
-                self.modulator_ax,
-                labels=['rss', 'max', 'mean', 'abs_mean', 'median', 'abs_median', 'heavy_varianz', 'ultra_heavy_varianz', 'light_varianz', 'mean_rss'],
-                active=6),
+            'modulator': widgets.RadioButtons(self.modulator_ax, labels=list(DATA_COMBINER.keys()), active=0),
             'fft_impl': widgets.RadioButtons(self.fft_ax, labels=['scipy.periodigram', 'kramer', 'scipy.welch', 'foo.fft'], active=0),
             'n_samples': widgets.TextBox(self.samples_ax, label='Processed samples:',
                                          initial=f'{settings.VBAN_SAMPLES_PROCESSED}'),
@@ -265,8 +263,8 @@ class Pyplotter:
             #_min = min([np.min(t_plot), np.min(t_orig), -1])
             #_max = max([np.max(t_plot), np.max(t_orig), 1])
 
-            self._min = -10
-            self._max = 0xFFFF + 10
+            self._min = settings.STL_FFT_SCALER_NEW_MIN
+            self._max = settings.STL_FFT_SCALER_NEW_MAX
 
             t_plot = np.copy(self.data)
             t_orig = np.copy(originals)
@@ -274,8 +272,8 @@ class Pyplotter:
             #    t_plot = t_plot + 75
             #    t_orig = t_orig + 75
 
-            _min_r = np.min(self._frequencies) - 20
-            _max_r = np.max(self._frequencies) + (frequency_domain_data.bar_width) / 2 + 20
+            _min_r = np.min(frequency_domain_data.bar_borders) - 20
+            _max_r = np.max(frequency_domain_data.bar_borders) + 20
 
             #while self._min > _min:
             #    self._min -= 200
@@ -297,15 +295,15 @@ class Pyplotter:
             _points = np.stack([np.array(self._frequencies).flatten(), np.array(t_plot).flatten()])
             segments = np.swapaxes(_points, 1, 0)
             lc = CircleCollection([90], offsets=segments, transOffset=self.parent_ax.transData, facecolors=[get_section_color(v) for v in t_plot])
-            self.parent_ax.plot(frequency_domain_data.sampled_frequencies, t_orig, color='red')
+            self.parent_ax.semilogx(frequency_domain_data.sampled_frequencies, t_orig, color='red')
             self.parent_ax.add_collection(lc)
-            self.parent_ax.plot(self._frequencies, t_plot)
+            self.parent_ax.semilogx(self._frequencies, t_plot)
 
             self.parent_ax.hlines([0xffff / 8 * x for x in range(8)], 0, max(self._frequencies))
 
             self.parent_ax.vlines(frequency_domain_data.sampled_frequencies, self._min, self._max, color='#00000011')
 
-            self.parent_ax.vlines([np.max(self._frequencies) + frequency_domain_data.bar_width / 2] + [x - (frequency_domain_data.bar_width / 2) for x in self._frequencies], self._min, self._max, color='#ff000033')
+            self.parent_ax.vlines(frequency_domain_data.bar_borders, self._min, self._max, color='#ff000033')
 
             self.parent_ax.vlines(self._frequencies, self._min, self._max)
 
