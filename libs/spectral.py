@@ -38,11 +38,23 @@ def _linear(start_y=.8, end_y=1.8, b=0):
         return data * factors + 0
     return mod
 
+
 LOG2MOD = log2_modulator(offset=1, end_val=2048)
+
 
 CURRENT_RANGE = {
     'min': None,
     'max': None,
+}
+
+DATA_COMBINER = {
+    'light_variance': lambda _data: np.average(_data, weights=1 / np.abs(_data - np.mean(_data))),
+    'heavy_variance': lambda _data: np.average(_data, weights=np.abs(_data - np.mean(_data)) ** 2),
+    'variance': lambda _data: np.average(_data, weights=np.abs(_data - np.mean(_data))),
+    'median': lambda _data: np.median(_data),
+    'mean': lambda _data: np.mean(_data),
+    'max': lambda _data: np.max(_data),
+    'min': lambda _data: np.min(_data),
 }
 
 
@@ -60,7 +72,7 @@ class SpectralBarRepresenter:
         self.__n_bars = n_bars
         self.__frequency_range = None
         self.__bar_frequency_values = None
-        self.__bar_width = None
+        self.__bar_borders = None
         self.__sampled_frequencies = None
         self.__cover_indices = None
         self.__sample_distances = None
@@ -81,8 +93,9 @@ class SpectralBarRepresenter:
 
     @data.setter
     def data(self, data):
-        mod = np.log2(np.linspace(1, self.MOD_ENDVAL, num=len(data) + self.MOD_OFFSET, endpoint=True))
-        self.__data = np.copy(data) * (mod[self.MOD_OFFSET:] / np.max(mod) * self.MOD_AMPLIFY)
+        #mod = np.log2(np.linspace(1, self.MOD_ENDVAL, num=len(data) + self.MOD_OFFSET, endpoint=True))
+        #self.__data = np.copy(data) * (mod[self.MOD_OFFSET:] / np.max(mod) * self.MOD_AMPLIFY)
+        self.__data = np.copy(data)
 
     @property
     def n_bars(self):
@@ -130,39 +143,45 @@ class SpectralBarRepresenter:
             self.__sample_distances = None
             self.__sampled_frequencies = np.copy(value)
 
-    @property
-    def bar_width(self):
-        if self.bar_frequencies is not None:
-            return self.__bar_width
-        return None
+    def _calc_bars(self):
+        range_exp = np.log10(self.frequency_range[1]) / np.log10(10)
+        if self.frequency_range[0] != 0:
+            start_exp = np.log10(self.frequency_range[0]) / np.log10(10)
+        else:
+            start_exp = 0
 
-    @bar_width.setter
-    def bar_width(self, value):
-        self.__bar_width = value
+        bf_log = np.linspace(start_exp, range_exp,
+                             num=(self.n_bars * 2) + 1,
+                             endpoint=True)
+        self.__bar_frequency_values = np.power(10, bf_log[1::2])
+        self.__bar_borders = np.power(10, bf_log[::2])
+
+        # Reset depending properties
+        self.__cover_indices = None
+        self.__sample_distances = None
+
+    @property
+    def bar_borders(self):
+        if self.__bar_borders is not None:
+            self._calc_bars()
+        return self.__bar_borders
 
     @property
     def bar_frequencies(self):
         if self.__bar_frequency_values is None:
-            bf, half_width = np.linspace(*self.frequency_range, num=self.n_bars * 2,
-                                    endpoint=False, retstep=True)
-            self.bar_width = half_width * 2
-            self.__bar_frequency_values = bf[1::2]
-            # Reset depending properties
-            self.__cover_indices = None
-            self.__sample_distances = None
+            self._calc_bars()
         return self.__bar_frequency_values
 
     @property
     def cover_indices(self):
         if self.__cover_indices is None:
-            _left_nearest = np.searchsorted(
+            nearest = np.searchsorted(
                 self.sampled_frequencies,
-                self.bar_frequencies - (self.bar_width / 2)
+                self.bar_borders
             )
-            _right_nearest = np.searchsorted(
-                self.sampled_frequencies,
-                self.bar_frequencies + (self.bar_width / 2)
-            )
+            _left_nearest = nearest[:-1]
+
+            _right_nearest = nearest[1:]
 
             self.__cover_indices = np.swapaxes(
                 np.array([_left_nearest, _right_nearest]), 0, 1
@@ -195,7 +214,7 @@ class SpectralBarRepresenter:
 
         for bar in range(self.n_bars):
             _data = self.data[slice(*self.cover_indices[bar])]
-            _bar_sections.append(np.average(_data, weights=1 / np.abs(_data - np.mean(_data))))
+            _bar_sections.append(DATA_COMBINER[method](_data))
 
         _bar_sections = out_scale(np.array(_bar_sections))
         cmd_kwargs = {f'val_{x}': value for x, value in enumerate(_bar_sections)}
