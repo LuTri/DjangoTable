@@ -63,6 +63,7 @@ class Command(BaseCommand):
             })
 
         self.plotter = self.presenter_class(
+            method=settings.RSS_CALCULATOR,
             os_new_min=settings.STL_FFT_SCALER_NEW_MIN,
             os_new_max=settings.STL_FFT_SCALER_NEW_MAX,
             os_old_min=settings.STL_FFT_SCALER_OLD_MIN,
