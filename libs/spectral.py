@@ -162,7 +162,7 @@ class SpectralBarRepresenter:
 
     @property
     def bar_borders(self):
-        if self.__bar_borders is not None:
+        if self.__bar_borders is None:
             self._calc_bars()
         return self.__bar_borders
 
