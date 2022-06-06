@@ -211,7 +211,6 @@ class VBANCollector:
         self.buffer_frames = buffer_frames
 
         self.receiver_thread = None
-        self.plotter_thread = None
 
         self.frame_lock = threading.Lock()
         self.__last_pcm = []
@@ -275,25 +274,10 @@ class VBANCollector:
 
     def run(self):
         self.receiver_thread = VBANReceiver(self, *self._args, verbose=self._verbose, **self._kwargs)
-        self.plotter_thread = None
-        if self._visual:
-            from .testplotterthread import PyplotThread
-            self.plotter_thread = PyplotThread(
-                self, *self._args, average_over=self._average_over,
-                skip_frames=self._skip_frames, **self._kwargs)
 
         self.receiver_thread.start()
-        if self.plotter_thread is not None:
-            self.plotter_thread.start()
-
-    def __del__(self):
-        if self.plotter_thread is not None:
-            self.plotter_thread.running = False
 
     def quit(self):
         if self.receiver_thread is not None:
             self.receiver_thread.running = False
             self.receiver_thread.join()
-        if self.plotter_thread is not None:
-            self.plotter_thread.running = False
-            self.plotter_thread.join()

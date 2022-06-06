@@ -19,9 +19,14 @@ class Command(VBANCollector, PsdCommand):
         self._kwargs.update({'required_samples': self.n_samples_processed})
 
         self.__live_frame = None
+        self.last_frame = 0
 
     def add_arguments(self, parser):
-        pass
+        parser.add_argument('-a', '--auto-reload', action='store_true',
+                            default=False)
+
+        parser.add_argument('-c', '--continuous', action='store_true',
+                            default=False)
 
     @property
     def combined_frames(self):
@@ -31,7 +36,22 @@ class Command(VBANCollector, PsdCommand):
     def combined_frames(self, value):
         self.__live_frame = value
 
-    def inner_run(self, **options):
+    def run_once(self):
+        frames = self.last_n_pcm(1)
+        if frames and frames[-1].frame_counter != self.last_frame:
+            _last_frame = frames[-1].frame_counter
+            skipped = _last_frame - self.last_frame
+            if skipped > 1 and self._verbose:
+                self.stdout.write(f'Frames skipped: {skipped}')
+            self.last_frame = _last_frame
+
+            self.combined_frames = frames
+            if self.needs_setup:
+                self.do_setup()
+
+            self.present_frame(-1)
+
+    def inner_run(self, continuous=False, **options):
         self.stderr.write(f'Config:', ending=os.linesep)
         self.stderr.write(f'{settings.PRESENTER_VALUE_LIMITS=}', ending=os.linesep)
         self.stderr.write(f'{settings.PRESENTER_FREQUENCY_RANGE=}', ending=os.linesep)
@@ -39,29 +59,21 @@ class Command(VBANCollector, PsdCommand):
 
         self.run()
 
-        last_frame = 0
-        while True:
-            try:
-                frames = self.last_n_pcm(1)
-                if frames and frames[-1].frame_counter != last_frame:
-                    _last_frame = frames[-1].frame_counter
-                    skipped = _last_frame - last_frame
-                    if skipped > 1 and self._verbose:
-                        self.stdout.write(f'Frames skipped: {skipped}')
-                    last_frame = _last_frame
+        try:
+            if continuous:
+                while True:
+                    self.run_once()
+            else:
+                self.do_setup()
+                self.plotter.run()
+        finally:
+            self.quit()
 
-                    self.combined_frames = frames
-                    if self.needs_setup:
-                        self.do_setup()
-
-                    self.present_frame(-1)
-            except KeyboardInterrupt:
-                break
-
-        self.quit()
-
-    def handle(self, *args, **options):
-        autoreload.run_with_reloader(self.inner_run, **options)
+    def handle(self, *args, auto_reload=None, **options):
+        if auto_reload:
+            autoreload.run_with_reloader(self.inner_run, **options)
+        else:
+            self.inner_run(**options)
 
     def get_impl_updater(self):
         def updater(fft_impl):

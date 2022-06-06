@@ -9,12 +9,13 @@ from copy import deepcopy
 from scipy.signal.windows import get_window
 
 
-def make_linear_output_scaler(new_max, new_min, old_max, old_min):
+def make_linear_output_scaler(new_max, new_min, old_max, old_min, as_int=True):
     def mod(data):
         t_arr = (new_max - new_min) * ((data - old_min) / (old_max - old_min)) + new_min
-        t_arr = t_arr.astype('int')
-        t_arr[t_arr < 0] = 0
-        t_arr[t_arr > new_max] = new_max
+        if as_int:
+            t_arr = t_arr.astype('int')
+            t_arr[t_arr < 0] = 0
+            t_arr[t_arr > new_max] = new_max
         return t_arr
     return mod
 
@@ -118,6 +119,7 @@ class SpectralBarRepresenter:
             self.__frequency_range = settings.PRESENTER_FREQUENCY_RANGE
             # Reset depending properties
             self.__bar_frequency_values = None
+            self.__bar_borders = None
         return self.__frequency_range
 
     @frequency_range.setter
@@ -125,6 +127,7 @@ class SpectralBarRepresenter:
         if self.__frequency_range is None or val != self.__frequency_range:
             # Reset depending properties
             self.__bar_frequency_values = None
+            self.__bar_borders = None
             self.__frequency_range = deepcopy(val)
 
     @property
@@ -202,6 +205,7 @@ class SpectralBarRepresenter:
 
     def write(self, writer, method=None, o_scale_new_min=0,
               o_scale_new_max=0xFFFF, o_scale_old_min=0, o_scale_old_max=0xFFFF):
+
         _bar_sections = []
 
         out_scale = make_linear_output_scaler(o_scale_new_max, o_scale_new_min, o_scale_old_max, o_scale_old_min)

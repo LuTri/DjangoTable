@@ -46,11 +46,15 @@ class Command(BaseCommand):
             with open(data_file, 'rb') as fp:
                 self._pcm_data = pickle.load(fp)
 
+        self.audi_bar = SpectralAudioBar(verbose=self._verbose)
+
         presenter_kwargs = {}
         if settings.DO_MATPLOT:
             presenter_kwargs.update({
                 'live': self.live,
-                'n_frames': len(self.combined_frames),
+                'parent_obj': self,
+                'spectral_creator': self.audi_bar,
+                #'n_frames': len(self.combined_frames),
                 'min_freq': self.presented_freq_range[0],
                 'max_freq': self.presented_freq_range[1],
                 'frame_update_fnc': self.get_frame_updater(),
@@ -70,7 +74,6 @@ class Command(BaseCommand):
             os_old_max=settings.STL_FFT_SCALER_OLD_MAX,
             **presenter_kwargs,
         )
-        self.audi_bar = SpectralAudioBar(verbose=self._verbose)
 
     @property
     def combined_frames(self):
