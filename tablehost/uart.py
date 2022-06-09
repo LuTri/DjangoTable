@@ -433,9 +433,9 @@ class MonitoringSerial(MonitorMixin, PatchedSerial):
 
 
 if settings.UART_TCP_WRAP:
-    serialClass = TcpClient.wrap(PatchedSerial)
+    DEFAULT_SERIAL_CLS = TcpClient.wrap(PatchedSerial)
 else:
-    serialClass = MonitoringSerial
+    DEFAULT_SERIAL_CLS = PatchedSerial
 
 
 class UartError(Exception):
@@ -481,7 +481,9 @@ class UartCom(object):
         module = importlib.import_module(module)
 
         self.__expected_answers = None
-        self._serial_class = serialClass or getattr(module, klass)
+        self._serial_class = serial_class
+        if self._serial_class is None:
+            self._serial_class = DEFAULT_SERIAL_CLS or getattr(module, klass)
         self.__connection = None
 
         self.data = []
@@ -798,12 +800,15 @@ class SoundToLight(UartCom):
         self.combiner = method
 
     def handle(self, frequency_domain_data, *args):
+        if not self.connection.is_open:
+            self.connection.open()
         frequency_domain_data.write(self,
                                     method=self.combiner,
                                     o_scale_new_min=self.os_new_min,
                                     o_scale_new_max=self.os_new_max,
                                     o_scale_old_min=self.os_old_min,
                                     o_scale_old_max=self.os_old_max)
+        self.connection.close()
 
 
 class UartSetState(UartCom):

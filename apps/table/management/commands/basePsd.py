@@ -148,10 +148,10 @@ class Command(BaseCommand):
     def present_frame(self, idx):
         self.plotter.handle(
             *self.audi_bar(self.combined_frames[idx],
-                          window_fnc=self.window_fnc,
-                          mean_channels=False,
-                          presented_range=self.presented_freq_range,
-                          fft_impl=self.fft_impl)
+                           window_fnc=self.window_fnc,
+                           mean_channels=False,
+                           presented_range=self.presented_freq_range,
+                           fft_impl=self.fft_impl)
         )
 
     def handle(self, *args, data_file=None, **options):

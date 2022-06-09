@@ -1,10 +1,56 @@
-import os
+import logging
+import warnings
+
+from functools import wraps
+
+from datetime import datetime
+from datetime import timedelta
+import time
 
 from django.utils import autoreload
 from django.conf import settings
 from libs.vbanRelay import VBANCollector
 
 from .basePsd import Command as PsdCommand
+
+
+def fps_sync(fnc):
+    if settings.STL_UART_FPS is None:
+        return fnc
+
+    delta_t = timedelta(seconds=1 / settings.STL_UART_FPS)
+
+    def wait(callee, logger):
+        exec_time = getattr(callee, '_exec_time', None)
+
+        earliest = datetime.now() - delta_t
+        if exec_time is not None and exec_time > earliest:
+            d_t = (datetime.now() - earliest).total_seconds()
+            time.sleep(d_t)
+        elif exec_time is not None:
+            d_t = (datetime.now() - exec_time).total_seconds()
+
+            notify_cnt = getattr(callee, '_notify_cnt', 0)
+            notify_cnt += 1
+            setattr(callee, '_notify_cnt', notify_cnt)
+
+            _avg = getattr(callee, '_avg_fps', None)
+            if _avg is None:
+                _avg = d_t
+            else:
+                _avg = (_avg + d_t) / 2
+
+            setattr(callee, '_avg_fps', _avg)
+            if notify_cnt % 500 == 0:
+                logger.info(f'Average FPS during last 500 frames: {1 / d_t:.2}')
+
+        setattr(callee, '_exec_time', datetime.now())
+
+    @wraps(fnc)
+    def wrapper(instance, *args, **kwargs):
+        wait(fnc, instance.logger)
+        return fnc(instance, *args, **kwargs)
+    return wrapper
 
 
 class Command(VBANCollector, PsdCommand):
@@ -21,6 +67,8 @@ class Command(VBANCollector, PsdCommand):
         self.__live_frame = None
         self.last_frame = 0
 
+        self.logger = logging.getLogger(settings.STL_CMD_LOGGER)
+
     def add_arguments(self, parser):
         parser.add_argument('-a', '--auto-reload', action='store_true',
                             default=False)
@@ -36,13 +84,14 @@ class Command(VBANCollector, PsdCommand):
     def combined_frames(self, value):
         self.__live_frame = value
 
+    @fps_sync
     def run_once(self):
         frames = self.last_n_pcm(1)
         if frames and frames[-1].frame_counter != self.last_frame:
             _last_frame = frames[-1].frame_counter
             skipped = _last_frame - self.last_frame
             if skipped > 1 and self._verbose:
-                self.stdout.write(f'Frames skipped: {skipped}')
+                self.logger.warning(f'Frames skipped: {skipped}')
             self.last_frame = _last_frame
 
             self.combined_frames = frames
@@ -52,10 +101,10 @@ class Command(VBANCollector, PsdCommand):
             self.present_frame(-1)
 
     def inner_run(self, continuous=False, **options):
-        self.stderr.write(f'Config:', ending=os.linesep)
-        self.stderr.write(f'{settings.PRESENTER_VALUE_LIMITS=}', ending=os.linesep)
-        self.stderr.write(f'{settings.PRESENTER_FREQUENCY_RANGE=}', ending=os.linesep)
-        self.stderr.write(f'{settings.VBAN_SAMPLES_PROCESSED=}', ending=os.linesep)
+        self.logger.info(f'Config:')
+        self.logger.info(f'{settings.PRESENTER_VALUE_LIMITS=}')
+        self.logger.info(f'{settings.PRESENTER_FREQUENCY_RANGE=}')
+        self.logger.info(f'{settings.VBAN_SAMPLES_PROCESSED=}')
 
         self.run()
 
@@ -66,14 +115,18 @@ class Command(VBANCollector, PsdCommand):
             else:
                 self.do_setup()
                 self.plotter.run()
+        except Exception as exc:
+            self.logger.fatal(exc)
         finally:
             self.quit()
 
     def handle(self, *args, auto_reload=None, **options):
-        if auto_reload:
-            autoreload.run_with_reloader(self.inner_run, **options)
-        else:
-            self.inner_run(**options)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            if auto_reload:
+                autoreload.run_with_reloader(self.inner_run, **options)
+            else:
+                self.inner_run(**options)
 
     def get_impl_updater(self):
         def updater(fft_impl):

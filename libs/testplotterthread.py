@@ -544,18 +544,12 @@ class Pyplotter:
 
         if self._orig_max is None or self._orig_max < _max:
             self._orig_max = _max
-            print(f'New orig max: {_max}')
 
         if self._orig_min is None or self._orig_min > _min:
             self._orig_min = _min
-            print(f'New orig min: {_min}')
-
-        #self.min_freq = np.min(frequency_domain_data.bar_borders) - 20
-        #self.max_freq = np.max(frequency_domain_data.bar_borders) + 20
 
         self.presenter = frequency_domain_data
         self.audio_data = raw_data
-        #self.do_plot(frequency_domain_data, originals, raw_data)
 
     def command(self, *args, **kwargs):
         self.data = [kwargs[key]

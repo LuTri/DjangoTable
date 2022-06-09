@@ -178,6 +178,14 @@ STL_FFT_SCALER_NEW_MAX = 0xFFFF
 STL_FFT_SCALER_OLD_MIN = 10
 STL_FFT_SCALER_OLD_MAX = 85
 
+STL_UART_FPS = 120
+STL_CMD_LOGGER = 'stl-cmd'
+STL_CMD_LOGGER_PATH = os.path.join(os.curdir, 'venv', 'stl.log')
+STL_CMD_LOGGER_MAX_BYTES = 2000
+STL_CMD_LOGGER_BACKUP_COUNT = 3
+STL_CMD_LOG_LEVEL = 'DEBUG'
+STL_CMD_LOGGER_HANDLERS = ['detailed_console']
+
 DO_MATPLOT = False
 
 try:
@@ -221,12 +229,25 @@ LOGGING = {
             'backupCount': UART_THREADS_LOGS_FILE_BACKUP_COUNT,
             'level': 'DEBUG',
         },
+        'cmd_files': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'detailed',
+            'filename': STL_CMD_LOGGER_PATH,
+            'maxBytes': STL_CMD_LOGGER_MAX_BYTES,
+            'backupCount': STL_CMD_LOGGER_BACKUP_COUNT,
+            'level': 'DEBUG',
+        }
     },
     'root': {
         'handlers': [],
         'level': 'WARNING',
     },
     'loggers': {
+        STL_CMD_LOGGER: {
+            'handlers': STL_CMD_LOGGER_HANDLERS,
+            'level': STL_CMD_LOG_LEVEL,
+            'propagate': True,
+        },
         'uart_com': {
             'handlers': ['detailed_console'],
             'level': LOG_LEVEL_UART,
