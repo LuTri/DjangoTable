@@ -821,3 +821,23 @@ class UartGetState(UartCom):
     @property
     def expected_answers(self):
         return [self.DEFINES.get('MSG_STATE_DATA_STOP').encode(),]
+
+    def command(self, *args, **kwargs):
+        from libs.mcconversion import per_one_2byte
+        from libs.mcconversion import dualbyte
+        from libs.mcconversion import full_float
+
+        reply, current_state = super().command(*args, **kwargs)
+
+        garbage, data = current_state.split(b'SD')
+        data = data.rstrip(b'DS')
+
+        results = {
+            'load_status': 'LOADED' if int(data[0]) == 1 else 'INITIALIZED',
+            'intensity': per_one_2byte.reverse(data[1:3]),
+            'fnc_count': dualbyte.reverse(data[3:5]),
+            'dim_delay': dualbyte.reverse(data[5:7]),
+            'hues': [full_float.reverse(data[7 + i * 4: 7 + (i + 1) * 4]) for i in range(8)],
+        }
+
+        return reply, results
