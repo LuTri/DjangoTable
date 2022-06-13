@@ -165,6 +165,8 @@ REMOTE_SERIAL_HOST_ADDR = 'sheepdroid'
 UART_THREADS_LOGS_FILE_PATH = os.path.join(os.curdir, 'venv', 'uart.log')
 UART_THREADS_LOGS_FILE_MAX_BYTES = 2000
 UART_THREADS_LOGS_FILE_BACKUP_COUNT = 3
+UART_COM_LOGS_HANDLERS = ['detailed_console']
+UART_THREADS_LOGS_HANDLERS = ['threaded', 'threaded_files']
 
 VBAN_PRESENTER_CLASS = 'tablehost.uart.SoundToLight'
 VBAN_SAMPLES_PROCESSED = 256
@@ -249,12 +251,12 @@ LOGGING = {
             'propagate': True,
         },
         'uart_com': {
-            'handlers': ['detailed_console'],
+            'handlers': UART_COM_LOGS_HANDLERS,
             'level': LOG_LEVEL_UART,
             'propagate': True,
         },
         'uart_threads': {
-            'handlers': ['threaded', 'threaded_files'],
+            'handlers': UART_THREADS_LOGS_HANDLERS, 
             'level': LOG_LEVEL_UART_THREADS,
             'propagate': True,
         },

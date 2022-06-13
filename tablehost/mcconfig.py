@@ -25,7 +25,7 @@ class FileConfig:
     def _load_data(self):
         _data = deepcopy(self._defaults)
 
-        self._logger.warning(f'LOADING DATA {self._filename}')
+        self._logger.debug(f'LOADING DATA {self._filename}')
         if os.path.exists(self._filename):
             with open(self._filename, 'r') as fp:
                 conf = json.load(fp)

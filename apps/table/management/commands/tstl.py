@@ -11,6 +11,9 @@ from django.utils import autoreload
 from django.conf import settings
 from libs.vbanRelay import VBANCollector
 
+from tablehost.uart import UartGetState
+from tablehost.uart import PatchedSerial
+
 from .basePsd import Command as PsdCommand
 
 
@@ -42,7 +45,15 @@ def fps_sync(fnc):
 
             setattr(callee, '_avg_fps', _avg)
             if notify_cnt % 500 == 0:
-                logger.info(f'Average FPS during last 500 frames: {1 / d_t:.2}')
+                getter = UartGetState(serial_class=PatchedSerial)
+                _, status = getter.command()
+                getter.connection.close()
+
+                _err = getattr(callee, '_errors', 0)
+                _err_ratio = _err / notify_cnt * 100
+
+
+                logger.info(f'Average FPS during last 500 frames: {1 / d_t:.2}, errors: {_err}, rate: {_err_ratio:.4}')
 
         setattr(callee, '_exec_time', datetime.now())
 
@@ -68,6 +79,10 @@ class Command(VBANCollector, PsdCommand):
         self.last_frame = 0
 
         self.logger = logging.getLogger(settings.STL_CMD_LOGGER)
+        self.last_cmd_time = None
+        self.delta_t = timedelta(seconds=1 / settings.STL_UART_FPS)
+        self.cmd_counter = 0
+        self.avg_fps = None
 
     def add_arguments(self, parser):
         parser.add_argument('-a', '--auto-reload', action='store_true',
@@ -84,7 +99,6 @@ class Command(VBANCollector, PsdCommand):
     def combined_frames(self, value):
         self.__live_frame = value
 
-    @fps_sync
     def run_once(self):
         frames = self.last_n_pcm(1)
         if frames and frames[-1].frame_counter != self.last_frame:
@@ -98,7 +112,26 @@ class Command(VBANCollector, PsdCommand):
             if self.needs_setup:
                 self.do_setup()
 
+            _start = None
+            d_t = 0
+            if self.last_cmd_time is not None:
+                earliest = self.last_cmd_time + self.delta_t
+                _start = datetime.now()
+                if earliest > _start:
+                    d_t = (earliest - _start).total_seconds()
+                    time.sleep(d_t)
+
             self.present_frame(-1)
+            _end = datetime.now()
+            if self.last_cmd_time is not None:
+                self.avg_fps = self.avg_fps or 1 / (_end - self.last_cmd_time).total_seconds()
+                self.avg_fps += 1 / (_end - self.last_cmd_time).total_seconds()
+                self.avg_fps /= 2
+            self.last_cmd_time = _end
+
+            self.cmd_counter += 1
+            if self.cmd_counter % 300 == 0:
+                self.logger.info(f'Average FPS during last 300 frames: {self.avg_fps:.2}, seconds waited last frame: {d_t}, Execution time last cmd: {(_end - _start).total_seconds()}')
 
     def inner_run(self, continuous=False, **options):
         self.logger.info(f'Config:')

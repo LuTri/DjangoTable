@@ -13,6 +13,7 @@ from pydoc import locate
 
 from libs.remoteObj import TcpClient
 from libs import mcconversion
+from libs.mcState import StateStruct
 from django.conf import settings
 from .mcconfig import FileConfig
 
@@ -398,10 +399,10 @@ class PatchedSerial(serial.Serial):
         is exceeded or until timeout occurs.
         """
         logger = logging.getLogger('uart_com')
-        logger.warning(
-            'READ_UNTIL IN OVERRIDEN METHOD!'
-            #f' {flat_traceback(traceback.format_stack())}'
-        )
+        #logger.warning(
+        #    'READ_UNTIL IN OVERRIDEN METHOD!'
+        #    #f' {flat_traceback(traceback.format_stack())}'
+        #)
         if not type(expected) in [tuple, list, set]:
             expected = [expected]
 
@@ -492,20 +493,20 @@ class UartCom(object):
 
     def _purge_connection(self):
         if self.__connection is not None:
-            self._logger.warning(
-                f'Purging self.__connection ('
-                f'{self.__connection.__class__.__name__} '
-                f'{hex(id(self.__connection))}) of {self}'
-            )
+            #self._logger.warning(
+            #    f'Purging self.__connection ('
+            #    f'{self.__connection.__class__.__name__} '
+            #    f'{hex(id(self.__connection))}) of {self}'
+            #)
             self.__connection.close()
             del self.__connection
             self.__connection = None
-        else:
-            self._logger.warning(
-                f'Purging self.__connection '
-                f'({self.__connection}) of {self}'
-                #f' {flat_traceback(traceback.format_stack())}'
-            )
+        #else:
+            #self._logger.warning(
+            #    f'Purging self.__connection '
+            #    f'({self.__connection}) of {self}'
+            #    #f' {flat_traceback(traceback.format_stack())}'
+            #)
 
     def reload(self):
         self._logger.info(
@@ -518,10 +519,10 @@ class UartCom(object):
     @property
     def connection(self):
         if self.__connection is None:
-            self._logger.error(
-                f'PROPERTY .connection: Creating new Serial. {self}.'
-                #f' {flat_traceback(traceback.format_stack())}'
-            )
+            #self._logger.error(
+            #    f'PROPERTY .connection: Creating new Serial. {self}.'
+            #    #f' {flat_traceback(traceback.format_stack())}'
+            #)
             self.__connection = self._serial_class(
                 port=self._config.get('PORT'),
                 baudrate=self._config.get('BAUD'),
@@ -531,10 +532,10 @@ class UartCom(object):
                 bytesize=self._config.get('CHAR_SIZE'),
                 stopbits=self._config.get('STOP_BITS'),
             )
-        self._logger.error(
-            f'ACCESSED .connection: {self}.'
-            #f' {flat_traceback(traceback.format_stack())}'
-        )
+        #self._logger.error(
+        #    f'ACCESSED .connection: {self}.'
+        #    #f' {flat_traceback(traceback.format_stack())}'
+        #)
         return self.__connection
 
     def mc_cycles_between_bytes(self):
@@ -558,6 +559,26 @@ class UartCom(object):
             sum2 = (sum2 + sum1) % 255
 
         return (sum1 << 8) | sum2
+
+    @property
+    def max_transmissions_per_second(self):
+        if len(self.data) == None:
+            self.prepare_data()
+
+        cmd_size = len(self.uart_out)
+        _possible = deepcopy(self.DEFINES.data.get(self.CMD, {}).get('params', []))
+        param_size = sum([x['bytes'] for x in _possible])
+
+        _t_bit = 1 / self._config.get('BAUD')
+        _p_bits = 1 if self._config.get('PARITY_MODE') > 0 else 0
+        _n_bits = (
+            self._config.get('STOP_BITS') +
+            self._config.get('CHAR_SIZE') +
+            _p_bits
+        )
+
+        _t_full_baud = _n_bits * _t_bit
+        return 1/ ((cmd_size + param_size) * _t_full_baud)
 
     @property
     def uart_out(self):
@@ -616,20 +637,27 @@ class UartCom(object):
         return self.__expected_answers
 
     def _write(self):
-        n_bytes = self.connection.write(self.uart_out)
-        self._logger.info(
-            f'Wrote {n_bytes}bytes to UART.'
-            #f' {flat_traceback(traceback.format_stack())}'
-        )
-        self._logger.debug(
-            f'Data: {self.uart_out}'
-            #f'{flat_traceback(traceback.format_stack())}'
-        )
-        reply = self.connection.read_until(expected=self.expected_answers)
+        _tries = 0
+        while True:
+            n_bytes = self.connection.write(self.uart_out)
+            self._logger.info(
+                f'Wrote {n_bytes}bytes to UART.'
+                #f' {flat_traceback(traceback.format_stack())}'
+            )
+            self._logger.debug(
+                f'Data: {self.uart_out}'
+                #f'{flat_traceback(traceback.format_stack())}'
+            )
+            reply = self.connection.read_until(expected=self.expected_answers)
 
-        if not any(exp in reply for exp in self.expected_answers):
-            raise UartReadTimeout(f'{self._config.get("PORT")} read Timeout. Received: {reply}')
-        return self.parse_reply(reply), reply
+            if not any(exp in reply for exp in self.expected_answers):
+                _tries += 1
+                if _tries >= settings.UART_RETRIES:
+                    raise UartReadTimeout(f'{self._config.get("PORT")} read Timeout. Received: {reply}')
+                self._logger.warning(f'Read timeout on {self._config.get("PORT")}, retrying. ({reply})')
+            else:
+                self._logger.info(f'Received expected answer {self.parse_reply(reply)}.')
+                return self.parse_reply(reply), reply
 
     def parse_reply(self, reply):
         messages = []
@@ -815,6 +843,23 @@ class UartSetState(UartCom):
     CMD = 'CMD_SET_STATE'
 
 
+from libs.mcconversion import per_one_2byte
+from libs.mcconversion import dualbyte
+from libs.mcconversion import full_float
+
+
+STATE_MAPPING = {
+    '_default': dualbyte.reverse,
+    'load_status': lambda v: v[0],
+    'benchmark_samples': lambda v: v[0],
+    'reboot_time_error': lambda v: v[0],
+    'reboot_time_general': lambda v: v[0],
+    'current_mode': lambda v: v[0],
+    'stl_hues': full_float.reverse,
+    'stl_intensity': per_one_2byte.reverse,
+}
+
+
 class UartGetState(UartCom):
     CMD = 'CMD_GET_STATE'
 
@@ -823,21 +868,22 @@ class UartGetState(UartCom):
         return [self.DEFINES.get('MSG_STATE_DATA_STOP').encode(),]
 
     def command(self, *args, **kwargs):
-        from libs.mcconversion import per_one_2byte
-        from libs.mcconversion import dualbyte
-        from libs.mcconversion import full_float
 
         reply, current_state = super().command(*args, **kwargs)
+
+        statestruct = StateStruct()
 
         garbage, data = current_state.split(b'SD')
         data = data.rstrip(b'DS')
 
-        results = {
-            'load_status': 'LOADED' if int(data[0]) == 1 else 'INITIALIZED',
-            'intensity': per_one_2byte.reverse(data[1:3]),
-            'fnc_count': dualbyte.reverse(data[3:5]),
-            'dim_delay': dualbyte.reverse(data[5:7]),
-            'hues': [full_float.reverse(data[7 + i * 4: 7 + (i + 1) * 4]) for i in range(8)],
-        }
+        results = {name: value for name, value in
+                   statestruct.read(data, STATE_MAPPING)}
 
         return reply, results
+
+class UartBlock(SimpleUartCmd):
+    CMD = 'CMD_BLOCK'
+
+
+class UartRelease(SimpleUartCmd):
+    CMD = 'CMD_RELEASE'
