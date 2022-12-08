@@ -1,5 +1,5 @@
 backports-abc==0.5
-certifi==2018.1.18
+certifi==2022.12.7
 chardet==3.0.4
 Django==1.11
 futures==3.2.0
